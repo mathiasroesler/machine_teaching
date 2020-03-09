@@ -1,0 +1,158 @@
+#!/usr/bin/env/ python3
+# -*- coding: utf-8 -*-
+
+"""
+Date: 6/3/2020
+Author: Mathias Roesler
+Mail: roesler.mathias@cmi-figure.fr
+"""
+
+import os
+import numpy as np
+from os.path import isfile
+from pathlib import Path
+from sklearn import svm
+from numpy.random import default_rng 
+
+def extract_data():
+    """ Finds the data file in the data directory and extracts the data
+    Input:
+    Output: data -> list[]
+    """
+
+    cwd = Path(os.getcwd())
+    data_dir = str(cwd.parent)+"/data"
+
+    for filename in os.listdir(data_dir):
+        # Go through all the files in the data directory
+        if filename[-5:] == ".data" and isfile(data_dir+"/"+filename): 
+            # If the file contains data extract it 
+            f_descriptor = open(data_dir+"/"+filename, 'r')
+            data = [line.rstrip().split(',') for line in f_descriptor]
+            f_descriptor.close()
+    
+    return data
+
+def sort_zoo_data(data):
+    """ Sorts the different classes of the zoo data
+    Input:  data -> list[]
+    Output: classes -> list[list[examples]]
+    """
+
+    mammal = []
+    bird = []
+    reptile = []
+    fish = []
+    amphibian = []
+    insect = []
+    mollusc = []
+
+    for example in data:
+        if example[-1] == '1':
+            mammal.append(example)
+
+        elif example[-1] == '2':
+            bird.append(example)
+
+        elif example[-1] == '3':
+            reptile.append(example)
+
+        elif example[-1] == '4':
+            fish.append(example)
+
+        elif example[-1] == '5':
+            amphibian.append(example)
+
+        elif example[-1] == '6':
+            insect.append(example)
+
+        else:
+            mollusc.append(example)
+
+    return np.array([mammal, bird, reptile, fish, amphibian, insect, mollusc])
+
+def divide_2_classes(class1, class2, feature, percent):
+    """ Divides the two input classes into test and train sets using
+        the input feature. The first column of the set is the feature
+        The train set is composed of percent% of the examples. The first
+        column is the feature, the second column is the label.
+        Returns -1 and -1 if an error occured.
+        Input:  class1 -> list[list[str]]
+                class2 -> list[list[str]]
+                feature -> int
+                percent -> int
+        Output: test_set -> np.array[str, str]
+                train_set -> np.array[str, str]
+    """
+
+    # Check for inconsistencies
+    if (percent < 0 or percent > 100):
+        print("Error in function divide_2_classes: percentage is inconsistent")
+        return -1, -1 
+
+    if (feature > len(class1[0])):
+        print("Error in function divide_2_classes: selected feature exceeds array")
+        return -1, -1 
+
+    # Estimate set sizes
+    class1_size = len(class1)
+    class1_nb_train_ex = percent*class1_size//100
+    class1_nb_test_ex = class1_size - class1_nb_train_ex
+
+    class2_size = len(class2)
+    class2_nb_train_ex = percent*class2_size//100
+    class2_nb_test_ex = class2_size - class2_nb_train_ex
+
+    # Defines the sets
+    train_set = -np.ones(shape=(class1_nb_train_ex + class2_nb_train_ex, 2))
+    test_set = -np.ones(shape=(class1_nb_test_ex + class2_nb_test_ex, 2))
+
+
+    # Randomly select percent% of examples for the train sets
+    rng = default_rng(0) # Set seed for repeatability
+    mammals_indices = rng.choice(range(0, class1_size), class1_size, replace=False)
+    birds_indices = rng.choice(range(0, class2_size), class2_size, replace=False)
+
+    for i in range(class1_nb_train_ex):
+        train_set[i][0] = class1[mammals_indices[i]][feature] # Add feature
+        train_set[i][1] = class1[mammals_indices[i]][-1]      # Add label
+
+    for i in range(class1_nb_train_ex, class2_nb_train_ex+class1_nb_train_ex):
+        train_set[i][0] = class2[birds_indices[i-class1_nb_train_ex]][feature]  # Add feature
+        train_set[i][1] = class2[birds_indices[i-class1_nb_train_ex]][-1]       # Add label
+    
+    for i in range(class1_nb_test_ex):
+        test_set[-i][0] = class1[mammals_indices[-i]][feature] # Add feature from end
+        test_set[-i][1] = class1[mammals_indices[-i]][-1]      # Add label from end
+
+    for i in range(class1_nb_test_ex, class2_nb_test_ex+class1_nb_test_ex):
+        test_set[-i][0] = class2[birds_indices[-i+class1_nb_test_ex]][feature]  # Add feature from end
+        test_set[-i][1] = class2[birds_indices[-i+class1_nb_test_ex]][-1]       # Add label from end
+
+    # Shuffle sets
+    rng.shuffle(train_set)
+    rng.shuffle(test_set)
+
+    return train_set, test_set
+
+def main():
+    """ Main function
+    Input:
+    Output:
+    """
+
+    data = extract_data() # Data locate in the .data file
+    classes = sort_zoo_data(data) # Sort examples of different classes
+
+    # Using only two classes
+    mammals = classes[0]
+    birds = classes[1]
+    feature = 2 # Use only one feature
+
+    train_set, test_set = divide_2_classes(mammals, birds, 2, 80)
+
+    print(train_set)
+    print("Test set")
+    print(test_set)
+
+main()
