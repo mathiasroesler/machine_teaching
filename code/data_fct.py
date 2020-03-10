@@ -14,8 +14,9 @@ from os.path import isfile
 from pathlib import Path
 from numpy.random import default_rng 
 
+
 def extract_data():
-    """ Finds the data file in the data directory and extracts the data
+    """ Finds the data file in the data directory and extracts the data.
     Input:
     Output: data -> np.array[list[str]]
     """
@@ -33,54 +34,62 @@ def extract_data():
     
     return np.asarray(data)
 
-def sort_zoo_data(data):
-    """ Sorts the different classes of the zoo data
-    Input:  data -> np.array[list[str]], list of features with
-                the last element being the label
-    Output: classes -> np.array[list[str]], list of features with
-                the last element being the label
-    """
 
-    mammal = []
-    bird = []
-    reptile = []
-    fish = []
-    amphibian = []
-    insect = []
-    mollusc = []
+def sort_data(data, nb_classes):
+    """ Sorts the different classes of data that contain
+    a list of numerical features.
+    Input:  data -> np.array[list[int]], list of features with
+                the last element being the label greater than 0.
+            nb_classes -> int, number of classes.
+    Output: classes -> list[list[list[int]]], each element is a list
+                of the examples for a class.
+    """
+    
+    # Check for inconsistencies
+    if not isinstance(nb_classes, int) and nb_classes <= 0:
+        print("Error in function sort_data: the number of classes must be a positive integer")
+        return None
+
+    classes = [list() for i in range(nb_classes)]
 
     for example in data:
-        if example[-1] == '1':
-            mammal.append(example)
+        for i in range(nb_classes):
+            # Check the label of the example
+            if i+1 == example[-1]:
+                # Add the example to the correct class
+                classes[i].append(example)
+                break
 
-        elif example[-1] == '2':
-            bird.append(example)
+    return classes
 
-        elif example[-1] == '3':
-            reptile.append(example)
 
-        elif example[-1] == '4':
-            fish.append(example)
+def sort_zoo_data(zoo_data, nb_classes):
+    """ Sorts the different classes of the zoo data.
+    Input:  data -> np.array[list[str]], list of features with
+                the last element being the label.
+            nb_classes -> int, number of classes.
+    Output: classes -> list[list[list[int]]], each element is a list
+                of the examples for a class.
+    """
 
-        elif example[-1] == '5':
-            amphibian.append(example)
+    data = list()
 
-        elif example[-1] == '6':
-            insect.append(example)
+    for example in zoo_data:
+        # Remove animal name and convert str to int
+        data.append(list(map(int, example[1:])))
 
-        else:
-            mollusc.append(example)
-
-    return np.array([mammal, bird, reptile, fish, amphibian, insect, mollusc])
+    return sort_data(data, nb_classes)
 
 
 def generate_indices(classes, percent, nb_features):
     """ Generates the indices to create a set.
-    Input:  class_sizes -> list[int], list of the number of examples
-                in each class.
-            class_indices -> list[list[int]], list of the indices for
-                the examples to be added to the set.
-    Output: indices -> np.array[np.array[int]], list of indices for the examples
+    Input:  classes -> list[list[list[int]]], each element is a list
+                of the examples for a class.
+            percent -> int, percent of examples to be put in the set.
+            nb_features -> int, number of desired features.
+    Output: example_set -> np.array[np.array[int]] -> set for the examples, 
+                filled with -1. 
+            indices -> list[np.array[int]], list of indices for the examples
                 to be chosen from each class.
     """
 
@@ -88,107 +97,115 @@ def generate_indices(classes, percent, nb_features):
     lengths = [len(current_class) for current_class in classes] # Number of examples in each class 
     nb_examples = [percent*lengths[i]//100 for i in range(nb_classes)] # Number of examples for the set for each class
 
-    example_set = -np.ones(shape=(np.sum(nb_examples), nb_features+1)) # Set of examples containing the features and the label
+    example_set = -np.ones(shape=(np.sum(nb_examples), nb_features+1)) # Set of examples for the features and the label
 
-    rng = default_rng(0) # Set seed
+    rng = default_rng() # Set seed
     indices = [rng.choice(range(lengths[i]), nb_examples[i], replace=False) for i in range(nb_classes)]
 
-    return indices
-    
+    return example_set, indices
 
 
-def divide_2_classes(class1, class2, percent=80, features=None):
-    """ Divides the two input classes into test and train sets using
+def extract_features(classes, features, nb_classes):
+    """ Extracts the desired features from the examples of all the classes.
+    Input:  classes -> list[list[list[int]]], each element is a list
+                of the examples for a class.
+            features -> list[int], list of desired features.
+            nb_classes -> int, number of classes.
+    Output: reduced_classes -> list[list[list[int]]], each element is a list
+                of the examples containing only the desired features for a
+                class. The last element of the example is the label.
+    """
+
+    reduced_classes = list() # All classes with only the desired features
+
+    for i in range(nb_classes):
+        reduced_class = list() # Class with only the desired features
+
+        for example in classes[i]:
+            reduced_example = list() # Example with only the desired features
+
+            for j in range(len(example)):
+                if j in features:
+                    # If the features is desired append it
+                    reduced_example.append(example[j])
+
+            reduced_example.append(example[-1])   # Append label
+            reduced_class.append(reduced_example) # Add to the list of examples
+
+        reduced_classes.append(reduced_class) # Add to list of classes
+
+    return reduced_classes
+
+
+def create_sets(classes, nb_classes, percent=80, features=None):
+    """ Divides the input classes into test and train sets using
         the input features. The first column of the set is the features
         The train set is composed of percent% of the examples.
-        Returns -1 and -1 if an error occured.
-        Input:  class1 -> np.array[list[str]], list of features with last element
-                    being the label.
-                class2 -> np.array[list[str]], list of features with last element
-                    being the label.
-                percent -> int
-                features -> int or list[int]
-        Output: test_set -> np.array[list[str]], each row is the features for
+        Returns None if an error occured.
+        Input:  classes -> list[list[list[int]]], each element is a list
+                    of the examples for a class.
+                nb_classes -> int, number of classes.
+                percent -> int, percent of example in a class to be put in
+                    the train set.
+                features -> int or list[int], features selected in each 
+                    example.
+        Output: test_set -> np.array[list[int]], each row is the features for
                     an example with the last element being the label.
-                train_set -> np.array[list[str]], each row is the features for
+                train_set -> np.array[list[int]], each row is the features for
                     an example with the last element being the label.
     """
 
     if features == None:
-        # If no features were specified use all of them
-        features = [i for i in range(len(class1[0])-1)]
-        print(features)
+        # If no features were specified use all of them (remove label)
+        features = [i for i in range(len(classes[0][0])-1)]
 
     # Check for inconsistencies
     if (percent < 0 or percent > 100):
-        print("Error in function divide_2_classes: percentage is inconsistent")
-        return -1, -1 
+        print("Error in function create_sets: percentage is inconsistent")
+        return None, None 
     
     if isinstance(features, int):
-        if features > len(class1[0]):
-            print("Error in function divide_2_classes: selected features exceeds array")
-            return -1, -1 
+        if features > len(classes[0]):
+            print("Error in function create_sets: selected features exceeds array")
+            return None, None 
 
         if features < 0:
-            print("Error in function divide_2_classes: the features must be a positive integer")
-            return -1, -1
+            print("Error in function create_sets: the features must be a positive integer")
+            return None, None
 
         features = [features] # Convert int feature into a list
 
     elif isinstance(features, list):
         for feature in features:
-            if feature > len(class1[0]):
-                print("Error in function divide_2_classes: selected features exceeds array")
-                return -1, -1 
+            if feature > len(classes[0]):
+                print("Error in function create_sets: selected features exceeds array")
+                return None, None
 
     else:
-        print("Error in function divide_2_classes: the features argument must be an integer or a list of integers")
-        return -1, -1
+        print("Error in function create_sets: the features argument must be an integer or a list of integers")
+        return None, None
 
-    # Estimate set sizes
-    class1_size = len(class1)
-    class1_nb_train_ex = percent*class1_size//100
-    class1_nb_test_ex = class1_size - class1_nb_train_ex
+    # Create sets and extract desired features
+    train_set, train_set_indices = generate_indices(classes, percent, len(features)) 
+    test_set, test_set_indices = generate_indices(classes, 100-percent, len(features))
+    reduced_classes = extract_features(classes, features, nb_classes)
+    train_index = 0
+    test_index = 0
 
-    class2_size = len(class2)
-    class2_nb_train_ex = percent*class2_size//100
-    class2_nb_test_ex = class2_size - class2_nb_train_ex
-
-    # Defines the sets
-    train_set = -np.ones(shape=(class1_nb_train_ex + class2_nb_train_ex, len(features)+1))
-    test_set = -np.ones(shape=(class1_nb_test_ex + class2_nb_test_ex, len(features)+1))
-
-    set_indices = generate_indices([class1, class2], percent, len(features)) 
-
-    # Randomly select percent% of examples for the train sets
-    rng = default_rng(0) # Set seed for repeatability
-    mammals_indices = rng.choice(range(0, class1_size), class1_nb_train_ex, replace=False)
-    birds_indices = rng.choice(range(0, class2_size), class2_nb_train_ex, replace=False)
-
-    for i in range(class1_nb_train_ex):
-        for j in range(len(features)):
-            train_set[i][j] = class1[mammals_indices[i]][features[j]] # Add features
-        train_set[i][-1] = class1[mammals_indices[i]][-1]      # Add label
-
-    for i in range(class1_nb_train_ex, class2_nb_train_ex+class1_nb_train_ex):
-        for j in range(len(features)):
-            train_set[i][j] = class2[birds_indices[i-class1_nb_train_ex]][features[j]]  # Add features
-        train_set[i][-1] = class2[birds_indices[i-class1_nb_train_ex]][-1]       # Add label
-    
-    for i in range(class1_nb_test_ex):
-        for j in range(len(features)):
-            test_set[-i][j] = class1[mammals_indices[-i]][features[j]] # Add features from end
-        test_set[-i][-1] = class1[mammals_indices[-i]][-1]      # Add label from end
-
-    for i in range(class1_nb_test_ex, class2_nb_test_ex+class1_nb_test_ex):
-        for j in range(len(features)):
-            test_set[-i][j] = class2[birds_indices[-i+class1_nb_test_ex]][features[j]]  # Add features from end
-        test_set[-i][-1] = class2[birds_indices[-i+class1_nb_test_ex]][-1]       # Add label from end
+    # Fill the created sets
+    for i in range(len(classes)): 
+        for j in range(len(train_set_indices[i])):
+            train_set[train_index] = reduced_classes[i][train_set_indices[i][j]]
+            train_index += 1
+        
+        for k in range(len(test_set_indices[i])):
+            test_set[test_index] = reduced_classes[i][test_set_indices[i][k]]
+            test_index += 1
 
     # Shuffle sets
+    rng = default_rng() # Set seed
     rng.shuffle(train_set)
     rng.shuffle(test_set)
-
 
     return train_set, test_set
 

@@ -15,21 +15,24 @@ from sklearn import svm
 def teacher_set(data, lam_coef, ite_max_nb):
     """ Produces the optimal teaching set given the data and
     a lambda coefficiant. If the teacher cannot converge in 
-    ite_max_nb then it returns -1.
-    Input:  data -> np.array[list[str]]
-            lam_coef -> int
-            ite_max_nb -> int
-    Output: teaching_set -> np.array[list[str]]
+    ite_max_nb then it returns None.
+    Input:  data -> np.array[list[int]], list of features with
+                the last element being the label greater than 0.
+            lam_coef -> int, coefficiant for the exponential distribution
+                for the threshold.
+            ite_max_nb -> int, maximal number of iterations.
+    Output: teaching_set -> np.array[list[int]], each row is the features 
+                for an example with the last element being the label.
     """
 
     # Check consitency
     if not isinstance(ite_max_nb, int):
         print("Error in function teacher_set: the number of iteration is not an integer")
-        return -1
+        return None
 
     if ite_max_nb <= 0:
         print("Error in function teacher_set: the number of iteration must be a positive integer greater than 0")
-        return -1
+        return None
     
     rng = default_rng(0) # Set seed
 

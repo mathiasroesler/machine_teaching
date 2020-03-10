@@ -14,18 +14,22 @@ from teacher import *
 from sklearn import svm
 
 def main():
+    nb_classes = 7
     data = extract_data() # Data locate in the .data file
-    classes = sort_zoo_data(data) # Sort examples of different classes
+    classes = sort_zoo_data(data, nb_classes) # Sort examples of different classes
+
+    if classes is None:
+        exit(1)
 
     # Using only two classes
     mammals = classes[0]
     birds = classes[1]
-    features = [2] # Used features 
+    features = [2, 3, 4] # Used features 
 
-    train_set, test_set = divide_2_classes(mammals, birds, features=[i for i in range(1, len(mammals[0])-1)])
+    train_set, test_set = create_sets([mammals, birds], 2)
 
-    if isinstance(train_set, int):
-        return
+    if train_set is None or test_set is None:
+        exit(1)
 
     model = svm.LinearSVC() # Declare SVM model
     model.fit(train_set[:, :-1], train_set[:, -1]) # Train model with data
