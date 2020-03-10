@@ -38,29 +38,31 @@ def extract_data():
 def sort_data(data, nb_classes):
     """ Sorts the different classes of data that contain
     a list of numerical features.
-    Input:  data -> np.array[list[int]], list of features with
+    Input:  data -> np.array[np.array[int]], list of features with
                 the last element being the label greater than 0.
             nb_classes -> int, number of classes.
-    Output: classes -> list[list[list[int]]], each element is a list
+    Output: classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
     """
+
+    nb_elements = len(data[0])
     
     # Check for inconsistencies
     if not isinstance(nb_classes, int) and nb_classes <= 0:
         print("Error in function sort_data: the number of classes must be a positive integer")
         return None
 
-    classes = [list() for i in range(nb_classes)]
+    classes = [np.empty(shape=(0, nb_elements), dtype=np.intc) for i in range(nb_classes)]
 
     for example in data:
         for i in range(nb_classes):
             # Check the label of the example
             if i+1 == example[-1]:
                 # Add the example to the correct class
-                classes[i].append(example)
+                classes[i] = np.append(classes[i], [example], axis=0)
                 break
 
-    return classes
+    return np.asarray(classes)
 
 
 def sort_zoo_data(zoo_data, nb_classes):
@@ -68,28 +70,30 @@ def sort_zoo_data(zoo_data, nb_classes):
     Input:  data -> np.array[list[str]], list of features with
                 the last element being the label.
             nb_classes -> int, number of classes.
-    Output: classes -> list[list[list[int]]], each element is a list
+    Output: classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
     """
 
-    data = list()
+    nb_elements = len(zoo_data[0])-1
+
+    data = np.empty(shape=(0, nb_elements), dtype=np.intc)
 
     for example in zoo_data:
         # Remove animal name and convert str to int
-        data.append(list(map(int, example[1:])))
+        data = np.append(data, [list(map(int, example[1:]))], axis=0)
 
     return sort_data(data, nb_classes)
 
 
 def generate_indices(classes, percent, nb_features):
     """ Generates the indices to create a set.
-    Input:  classes -> list[list[list[int]]], each element is a list
+    Input:  classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
             percent -> int, percent of examples to be put in the set.
             nb_features -> int, number of desired features.
     Output: example_set -> np.array[np.array[int]] -> set for the examples, 
                 filled with -1. 
-            indices -> list[np.array[int]], list of indices for the examples
+            indices -> np.array[np.array[int]], list of indices for the examples
                 to be chosen from each class.
     """
 
@@ -97,44 +101,39 @@ def generate_indices(classes, percent, nb_features):
     lengths = [len(current_class) for current_class in classes] # Number of examples in each class 
     nb_examples = [percent*lengths[i]//100 for i in range(nb_classes)] # Number of examples for the set for each class
 
-    example_set = -np.ones(shape=(np.sum(nb_examples), nb_features+1)) # Set of examples for the features and the label
+    example_set = -np.ones(shape=(np.sum(nb_examples), nb_features+1), dtype=np.intc) # Set of examples for the features and the label
 
     rng = default_rng() # Set seed
     indices = [rng.choice(range(lengths[i]), nb_examples[i], replace=False) for i in range(nb_classes)]
 
-    return example_set, indices
+    return example_set, np.asarray(indices)
 
 
 def extract_features(classes, features, nb_classes):
     """ Extracts the desired features from the examples of all the classes.
-    Input:  classes -> list[list[list[int]]], each element is a list
+    Input:  classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
             features -> list[int], list of desired features.
             nb_classes -> int, number of classes.
-    Output: reduced_classes -> list[list[list[int]]], each element is a list
-                of the examples containing only the desired features for a
-                class. The last element of the example is the label.
+    Output: reduced_classes -> np.array[np.array[np.array[int]]], each element 
+                is a list of the examples containing only the desired features 
+                for a class. The last element of the example is the label.
     """
+    
+    features.append(-1) # Add label to the desired features
+    nb_features = len(features)
 
     reduced_classes = list() # All classes with only the desired features
 
     for i in range(nb_classes):
-        reduced_class = list() # Class with only the desired features
+        reduced_class = np.empty(shape=(0, nb_features), dtype=np.intc) # Class with only the desired features
 
         for example in classes[i]:
-            reduced_example = list() # Example with only the desired features
-
-            for j in range(len(example)):
-                if j in features:
-                    # If the features is desired append it
-                    reduced_example.append(example[j])
-
-            reduced_example.append(example[-1])   # Append label
-            reduced_class.append(reduced_example) # Add to the list of examples
+            reduced_class = np.append(reduced_class, [example[features]], axis=0) # Add example with desired features only
 
         reduced_classes.append(reduced_class) # Add to list of classes
 
-    return reduced_classes
+    return np.asarray(reduced_classes)
 
 
 def create_sets(classes, nb_classes, percent=80, features=None):
@@ -142,22 +141,24 @@ def create_sets(classes, nb_classes, percent=80, features=None):
         the input features. The first column of the set is the features
         The train set is composed of percent% of the examples.
         Returns None if an error occured.
-        Input:  classes -> list[list[list[int]]], each element is a list
+        Input:  classes -> np.array[np.array[np.array[int]]], each element is a list
                     of the examples for a class.
                 nb_classes -> int, number of classes.
                 percent -> int, percent of example in a class to be put in
                     the train set.
                 features -> int or list[int], features selected in each 
                     example.
-        Output: test_set -> np.array[list[int]], each row is the features for
+        Output: test_set -> np.array[np.array[int]], each row is the features for
                     an example with the last element being the label.
-                train_set -> np.array[list[int]], each row is the features for
+                train_set -> np.array[np.array[int]], each row is the features for
                     an example with the last element being the label.
     """
 
+    nb_features = len(classes[0][0])-1 # Number of features in an example
+
     if features == None:
         # If no features were specified use all of them (remove label)
-        features = [i for i in range(len(classes[0][0])-1)]
+        features = [i for i in range(nb_features)]
 
     # Check for inconsistencies
     if (percent < 0 or percent > 100):
@@ -165,7 +166,7 @@ def create_sets(classes, nb_classes, percent=80, features=None):
         return None, None 
     
     if isinstance(features, int):
-        if features > len(classes[0]):
+        if features > nb_features:
             print("Error in function create_sets: selected features exceeds array")
             return None, None 
 
@@ -177,7 +178,7 @@ def create_sets(classes, nb_classes, percent=80, features=None):
 
     elif isinstance(features, list):
         for feature in features:
-            if feature > len(classes[0]):
+            if feature > nb_features:
                 print("Error in function create_sets: selected features exceeds array")
                 return None, None
 
@@ -186,21 +187,25 @@ def create_sets(classes, nb_classes, percent=80, features=None):
         return None, None
 
     # Create sets and extract desired features
-    train_set, train_set_indices = generate_indices(classes, percent, len(features)) 
-    test_set, test_set_indices = generate_indices(classes, 100-percent, len(features))
+    train_set, train_classes_indices = generate_indices(classes, percent, len(features)) 
+    test_set, test_classes_indices = generate_indices(classes, 100-percent, len(features))
     reduced_classes = extract_features(classes, features, nb_classes)
-    train_index = 0
-    test_index = 0
+    train_offset= 0
+    test_offset = 0
 
     # Fill the created sets
     for i in range(len(classes)): 
-        for j in range(len(train_set_indices[i])):
-            train_set[train_index] = reduced_classes[i][train_set_indices[i][j]]
-            train_index += 1
-        
-        for k in range(len(test_set_indices[i])):
-            test_set[test_index] = reduced_classes[i][test_set_indices[i][k]]
-            test_index += 1
+        # Get indices for examples of ith class
+        train_set_indices = range(train_offset, train_offset+len(train_classes_indices[i]))
+        test_set_indices = range(test_offset, test_offset+len(test_classes_indices[i]))
+
+        # Fill the dedicated space with examples
+        train_set[train_set_indices] = reduced_classes[i][train_classes_indices[i]]
+        test_set[test_set_indices] = reduced_classes[i][test_classes_indices[i]]
+
+        # Update the offsets
+        train_offset = len(train_classes_indices[i])
+        test_offset = len(test_classes_indices[i])
 
     # Shuffle sets
     rng = default_rng() # Set seed
