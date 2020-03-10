@@ -113,14 +113,14 @@ def extract_features(classes, features, nb_classes):
     """ Extracts the desired features from the examples of all the classes.
     Input:  classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
-            features -> list[int], list of desired features.
+            features -> np.array[int], list of desired features.
             nb_classes -> int, number of classes.
     Output: reduced_classes -> np.array[np.array[np.array[int]]], each element 
                 is a list of the examples containing only the desired features 
                 for a class. The last element of the example is the label.
     """
     
-    features.append(-1) # Add label to the desired features
+    features = np.append(features, [-1], axis=0) # Add label to the desired features
     nb_features = len(features)
 
     reduced_classes = list() # All classes with only the desired features
@@ -146,7 +146,7 @@ def create_sets(classes, nb_classes, percent=80, features=None):
                 nb_classes -> int, number of classes.
                 percent -> int, percent of example in a class to be put in
                     the train set.
-                features -> int or list[int], features selected in each 
+                features -> int or np.array[int], features selected in each 
                     example.
         Output: test_set -> np.array[np.array[int]], each row is the features for
                     an example with the last element being the label.
@@ -156,16 +156,20 @@ def create_sets(classes, nb_classes, percent=80, features=None):
 
     nb_features = len(classes[0][0])-1 # Number of features in an example
 
-    if features == None:
-        # If no features were specified use all of them (remove label)
-        features = [i for i in range(nb_features)]
-
     # Check for inconsistencies
-    if (percent < 0 or percent > 100):
-        print("Error in function create_sets: percentage is inconsistent")
-        return None, None 
-    
-    if isinstance(features, int):
+    if type(features) is np.ndarray: 
+        if features.size == 0:
+            # If no features were specified use all of them (remove label)
+            features = [i for i in range(nb_features)]
+        
+        else:
+            # Check that all the features are correct
+            for feature in features:
+                if feature > nb_features:
+                    print("Error in function create_sets: selected features exceeds array")
+                    return None, None
+
+    elif type(features) is int:
         if features > nb_features:
             print("Error in function create_sets: selected features exceeds array")
             return None, None 
@@ -175,17 +179,15 @@ def create_sets(classes, nb_classes, percent=80, features=None):
             return None, None
 
         features = [features] # Convert int feature into a list
-
-    elif isinstance(features, list):
-        for feature in features:
-            if feature > nb_features:
-                print("Error in function create_sets: selected features exceeds array")
-                return None, None
-
+    
     else:
         print("Error in function create_sets: the features argument must be an integer or a list of integers")
         return None, None
 
+    if (percent < 0 or percent > 100):
+        print("Error in function create_sets: percentage is inconsistent")
+        return None, None 
+    
     # Create sets and extract desired features
     train_set, train_classes_indices = generate_indices(classes, percent, len(features)) 
     test_set, test_classes_indices = generate_indices(classes, 100-percent, len(features))
