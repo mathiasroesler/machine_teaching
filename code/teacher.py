@@ -12,7 +12,7 @@ import numpy as np
 from numpy.random import default_rng 
 from sklearn import svm
 
-def create_teacher_set(data, lam_coef, ite_max_nb):
+def create_teacher_set(data, lam_coef):
     """ Produces the optimal teaching set given the data and
     a lambda coefficiant. If the teacher cannot converge in 
     ite_max_nb then it returns None.
@@ -20,27 +20,22 @@ def create_teacher_set(data, lam_coef, ite_max_nb):
                 the last element being the label greater than 0.
             lam_coef -> int, coefficiant for the exponential distribution
                 for the thresholds.
-            ite_max_nb -> int, maximal number of iterations.
     Output: teaching_set -> np.array[np.array[int]], each row is the features 
                 for an example with the last element being the label.
+            accuracy -> np.array[int], accuracy of the model at each iteration.
+            example_nb -> np.array[int], number of examples in teaching set at
+                each iteration.
     """
 
-    # Check consitency
-    if not isinstance(ite_max_nb, int):
-        print("Error in function teacher_set: the number of iteration is not an integer")
-        return None
-
-    if ite_max_nb <= 0:
-        print("Error in function teacher_set: the number of iteration must be a positive integer greater than 0")
-        return None
-    
-    rng = default_rng(0) # Set seed
+    rng = default_rng() # Set seed 
 
     # Variables
-    ite = 0 # Iteration counter
+    full_data = data
     nb_examples = data.shape[0]
     weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
     thresholds = rng.exponential(1/lam_coef, size=(nb_examples)) # Threshold for each example
+    accuracy = np.array([0], dtype=np.intc) # List of accuracy at each iteration, starts with 0
+    example_nb = np.array([0], dtype=np.intc) # List of number of examples at each iteration, starts with 0
     model = svm.LinearSVC() # SVM model
 
     for i in range(1, len(data)):
@@ -49,17 +44,23 @@ def create_teacher_set(data, lam_coef, ite_max_nb):
             # If the two examples belong to different classes
             model.fit(data[i-1:i+1, :-1], data[i-1:i+1, -1]) # Intialize learner
 
-            # Add examples to the teaching set and remove them from data, weights and thresholds
+            # Add examples to the teaching set
             teaching_set = np.vstack((data[i-1], data[i]))
+            
+            # Test the accuracy of the model
+            accuracy = np.append(accuracy, [model.score(full_data[:, :-1], full_data[:, -1])], axis=0)
+            example_nb = np.append(example_nb, [len(teaching_set)], axis=0)
+            
+            # Remove examples from data, weights and threshold
             data = np.delete(data, [i-1, i], axis=0)
             weights = np.delete(weights, [i-1, i], axis=0)
             thresholds = np.delete(thresholds, [i-1, i], axis=0)
             break
 
-    while len(teaching_set) != nb_examples and ite < ite_max_nb:
+    while len(teaching_set) != nb_examples:
         # Exit if all of the examples are in the teaching set
-        missed_indices = np.array([], dtype=np.intc)        # List of the indices of the missclassified examples
-        added_indices = np.array([], dtype=np.intc) # List of the indices of added examples to the teaching set
+        missed_indices = np.array([], dtype=np.intc) # List of the indices of the missclassified examples
+        added_indices = np.array([], dtype=np.intc)  # List of the indices of added examples to the teaching set
 
         for i in range(len(data)):
             example = data[i]
@@ -70,7 +71,7 @@ def create_teacher_set(data, lam_coef, ite_max_nb):
             # All examples are placed correctly
             break
 
-        while weight_sum(weights, missed_indices) < 1:
+        while np.sum(weights[missed_indices]) < 1:
             for index in missed_indices:
                 # Double the value of each weight
                 weights[index] = 2*weights[index] 
@@ -82,31 +83,14 @@ def create_teacher_set(data, lam_coef, ite_max_nb):
 
         # Fit the model with the new teaching set
         model.fit(teaching_set[:, :-1], teaching_set[:, -1])
+        
+        # Test model accuracy
+        accuracy = np.append(accuracy, [model.score(full_data[:, :-1], full_data[:, -1])], axis=0)
+        example_nb = np.append(example_nb, [len(teaching_set)], axis=0)
 
         # Remove data, weights and thresholds of examples in the teaching set
         data = np.delete(data, added_indices, axis=0)
         weights = np.delete(weights, added_indices, axis=0)
         thresholds = np.delete(thresholds, added_indices, axis=0)
 
-        ite += 1
-
-    if ite > ite_max_nb:
-        print("Unable to converge to a solution")
-        return None
-
-    return teaching_set
-
-
-def weight_sum(weights, indices):
-    """ Calculates the sum of the missclassified weights.
-    Input:  weights -> list[float]
-            indices -> list[int]
-    Output: total -> float
-    """
-
-    total = 0.
-
-    for index in indices:
-        total += weights[index]
-
-    return total
+    return teaching_set, accuracy, example_nb

@@ -27,7 +27,7 @@ def main():
         exit(1)
 
     # User selects the classes
-    print("1: mammals, 2: birds, 3:reptiles, 4:fish, 5: amphibians, 6: insects, 7: molluscs\n")
+    print("1: mammals, 2: birds, 3: reptiles, 4: fish, 5: amphibians, 6: insects, 7: molluscs\n")
 
     print("Select first class between 1 and 7: ")
     while first_class < 1 or first_class > 8:
@@ -43,7 +43,7 @@ def main():
         except:
             print("Please enter an integer")
 
-    print("\n1: hair, 2: feathers, 3:eggs, 4: milk, 5: airborne, 6: aquatic, 7: predator, 8: toothed, 9: backbone, 10: breathes, 11: venomous, 12: fins, 13: legs, 14: tail, 15: domestic, 16: catsize\n")
+    print("\n1: hair, 2: feathers, 3: eggs, 4: milk, 5: airborne, 6: aquatic, 7: predator, 8: toothed, 9: backbone, 10: breathes, 11: venomous, 12: fins, 13: legs, 14: tail, 15: domestic, 16: catsize\n")
 
     print("Select features by number or input all for all of them: ")
     while used_features.size == 0:
@@ -72,16 +72,17 @@ def main():
 
     model = svm.LinearSVC() # Declare SVM model
     model.fit(train_set[:, :-1], train_set[:, -1]) # Train model with data
-    full_score = model.score(test_set[:, :-1], test_set[:, -1])
+    full_train_score = model.score(train_set[:, :-1], train_set[:, -1]) # Train score for fully trained model
+    full_test_score = model.score(test_set[:, :-1], test_set[:, -1])    # Test score for fully trained model
     print("\nFull train set length", len(train_set))
     print("\nFully trained coefficiants\n", model.coef_)
-    print("\nFully trained test score", full_score)
+    print("\nFully trained test score", full_test_score)
 
     # Find optimal set
     delta = 0.1
     N = np.power(2, len(train_set))-1
 
-    optimal_set = create_teacher_set(train_set, np.log(N/delta), 10)
+    optimal_set, accuracy, example_nb = create_teacher_set(train_set, np.log(N/delta))
 
     if optimal_set is None:
         exit(1)
@@ -92,11 +93,31 @@ def main():
     # Train model with optimal set
     optimal_model = svm.LinearSVC()
     optimal_model.fit(optimal_set[:, :-1], optimal_set[:, -1])
-    optimal_score = optimal_model.score(train_set[:, :-1], train_set[:, -1])
+    optimal_test_score = optimal_model.score(test_set[:, :-1], test_set[:, -1])
     print("\nOptimaly trained coefficiants\n", optimal_model.coef_)
-    print("\nOptimaly trained test score", optimal_score) 
+    print("\nOptimaly trained test score", optimal_test_score) 
     print("\nTraining set compression rate:", 1-len(optimal_set)/len(train_set))
-    print("\nAccuracy compression rate:", 1-(optimal_score/full_score))
 
+    plot_data(full_train_score, accuracy, example_nb)
+
+
+def plot_data(full_train_score, accuracy, example_nb):
+    """ Plots the data.
+    Input:  full_train_score -> float, accuracy for the fully trained model.
+            accuracy -> np.array[int], accuracy at each iteration for
+                the optimally trained model.
+            example_nb -> np.array[int], number of examples at each 
+                iteration for the optimally trained model.
+    Output:
+    """
+
+    plt.plot(example_nb, accuracy,'bo-', label="Optimally trained model") # Plot for the optimal trained model 
+    plt.plot(example_nb, [full_train_score for i in range(len(example_nb))], 'ro-', label="Fully trained model") # Plot for the fully trained model
+
+    plt.xlabel("Teaching set size")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    plt.grid(True, which="both") # Add grid
+    plt.show()
 
 main()
