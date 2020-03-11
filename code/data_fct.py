@@ -15,10 +15,13 @@ from pathlib import Path
 from numpy.random import default_rng 
 
 
-def extract_data():
+def extract_zoo_data():
     """ Finds the data file in the data directory and extracts the data.
     Input:
-    Output: data -> np.array[list[str]]
+    Output: data -> np.array[list[str]], list of examples with the last
+                element the label.
+                First dimension number of examples.
+                Second dimension features.
     """
 
     cwd = Path(os.getcwd())
@@ -27,22 +30,49 @@ def extract_data():
     for filename in os.listdir(data_dir):
         # Go through all the files in the data directory
         if filename[-5:] == ".data" and isfile(data_dir+"/"+filename): 
-            # If the file contains data extract it 
+            # If the file is the zoo data file extract data 
             f_descriptor = open(data_dir+"/"+filename, 'r')
             data = [line.rstrip().split(',') for line in f_descriptor]
             f_descriptor.close()
     
     return np.asarray(data)
 
+def extract_MNIST_data():
+    """ Extracts the data for the MNIST data files.
+    Input:
+    Output: MNIST_train -> np.array[np.array[int]], list of examples with
+                the last element the label. 
+                First dimension number of examples.
+                Second dimension features.
+            MNIST_test -> np.array[np.array[int]], list of examples with
+                the last element the label.
+                First dimension number of examples.
+                Second dimension features.
+    """
+
+    MNIST_train_data = np.load('../data/basetrain.npy')
+    MNIST_train_label = np.load('../data/labeltrain.npy')
+    MNIST_test_data = np.load('../data/basetest.npy')
+    MNIST_test_label = np.load('../data/labeltest.npy')
+
+    MNIST_train = np.append(MNIST_train_data, [MNIST_train_label], axis=0) # Add label to the features
+    MNIST_test = np.append(MNIST_test_data, [MNIST_test_label], axis=0)    # Add label to the features
+
+    return np.transpose(MNIST_train), np.transpose(MNIST_test)
 
 def sort_data(data, nb_classes):
     """ Sorts the different classes of data that contain
     a list of numerical features.
     Input:  data -> np.array[np.array[int]], list of features with
                 the last element being the label greater than 0.
+                First dimension number of examples.
+                Second dimension features.
             nb_classes -> int, number of classes.
     Output: classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
+                First dimension the classe
+                Second dimension number of examples.
+                Third dimension features.
     """
 
     nb_elements = len(data[0])
@@ -69,9 +99,14 @@ def sort_zoo_data(zoo_data, nb_classes):
     """ Sorts the different classes of the zoo data.
     Input:  data -> np.array[list[str]], list of features with
                 the last element being the label.
+                First dimension number of examples.
+                Second dimension features.
             nb_classes -> int, number of classes.
     Output: classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
+                First dimension the classe
+                Second dimension number of examples.
+                Third dimension features.
     """
 
     nb_elements = len(zoo_data[0])-1
@@ -89,12 +124,19 @@ def generate_indices(classes, percent, nb_features):
     """ Generates the indices to create a set.
     Input:  classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
+                First dimension the classe
+                Second dimension number of examples.
+                Third dimension features.
             percent -> int, percent of examples to be put in the set.
             nb_features -> int, number of desired features.
     Output: example_set -> np.array[np.array[int]] -> set for the examples, 
                 filled with -1. 
+                First dimension number of examples.
+                Second dimension features.
             indices -> np.array[np.array[int]], list of indices for the examples
                 to be chosen from each class.
+                First dimension number of examples.
+                Second dimension features.
     """
 
     nb_classes = len(classes)
@@ -113,11 +155,17 @@ def extract_features(classes, features, nb_classes):
     """ Extracts the desired features from the examples of all the classes.
     Input:  classes -> np.array[np.array[np.array[int]]], each element is a list
                 of the examples for a class.
+                First dimension the classe
+                Second dimension number of examples.
+                Third dimension features.
             features -> np.array[int], list of desired features.
             nb_classes -> int, number of classes.
     Output: reduced_classes -> np.array[np.array[np.array[int]]], each element 
                 is a list of the examples containing only the desired features 
                 for a class. The last element of the example is the label.
+                First dimension the classe
+                Second dimension number of examples.
+                Third dimension features.
     """
     
     features = np.append(features, [-1], axis=0) # Add label to the desired features
@@ -143,6 +191,9 @@ def create_sets(classes, nb_classes, percent=80, features=None):
         Returns None if an error occured.
         Input:  classes -> np.array[np.array[np.array[int]]], each element is a list
                     of the examples for a class.
+                    First dimension the classe
+                    Second dimension number of examples.
+                    Third dimension features.
                 nb_classes -> int, number of classes.
                 percent -> int, percent of example in a class to be put in
                     the train set.
@@ -150,8 +201,12 @@ def create_sets(classes, nb_classes, percent=80, features=None):
                     example.
         Output: test_set -> np.array[np.array[int]], each row is the features for
                     an example with the last element being the label.
+                    First dimension number of examples.
+                    Second dimension features.
                 train_set -> np.array[np.array[int]], each row is the features for
                     an example with the last element being the label.
+                    First dimension number of examples.
+                    Second dimension features.
     """
 
     nb_features = len(classes[0][0])-1 # Number of features in an example

@@ -18,10 +18,14 @@ def create_teacher_set(data, lam_coef):
     ite_max_nb then it returns None.
     Input:  data -> np.array[np.array[int]], list of features with
                 the last element being the label greater than 0.
+                First dimension number of examples.
+                Second dimension features.
             lam_coef -> int, coefficiant for the exponential distribution
                 for the thresholds.
     Output: teaching_set -> np.array[np.array[int]], each row is the features 
                 for an example with the last element being the label.
+                First dimension number of examples.
+                Second dimension features.
             accuracy -> np.array[int], accuracy of the model at each iteration.
             example_nb -> np.array[int], number of examples in teaching set at
                 each iteration.
