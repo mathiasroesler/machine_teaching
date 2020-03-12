@@ -8,13 +8,15 @@ Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
-from data_fct import *
+from zoo_data_fct import *
+from mnist_data_fct import *
 from teacher import *
 from custom_fct import *
 
-def main():
-
-    extract_MNIST_data()
+def main_zoo():
+    """ Main function for the zoo data.
+    Using a one vs one strategy with an SVM.
+    """
 
     # Variables
     nb_classes = 7
@@ -25,8 +27,6 @@ def main():
     if classes is None:
         exit(1)
 
-    """
-
     first_class, second_class, used_features = custom_input() 
 
     used_classes = [classes[first_class-1], classes[second_class-1]]
@@ -36,34 +36,75 @@ def main():
     if train_set is None or test_set is None:
         exit(1)
 
-    model = svm.LinearSVC() # Declare SVM model
-    model.fit(train_set[:, :-1], train_set[:, -1]) # Train model with data
-    full_train_score = model.score(train_set[:, :-1], train_set[:, -1]) # Train score for fully trained model
-    full_test_score = model.score(test_set[:, :-1], test_set[:, -1])    # Test score for fully trained model
-    print("\nFull train set length", len(train_set))
-    print("\nFully trained coefficiants\n", model.coef_)
-    print("\nFully trained test score", full_test_score)
+    # Train model with all the train set
+    full_test_score = create_svm_model(train_set, test_set)
 
     # Find optimal set
     delta = 0.1
     N = np.power(2, len(train_set))-1
+    max_iter = 5
 
-    optimal_set, accuracy, example_nb = create_teacher_set(train_set, np.log(N/delta))
+    optimal_set, accuracy, example_nb = create_teacher_set(train_set, test_set, np.log(N/delta), full_test_score)
 
     if optimal_set is None:
         exit(1)
 
-    print("\nOptimal train set length", len(optimal_set))
-    print("\nOptimal set\n", optimal_set)
-
     # Train model with optimal set
-    optimal_model = svm.LinearSVC()
-    optimal_model.fit(optimal_set[:, :-1], optimal_set[:, -1])
-    optimal_test_score = optimal_model.score(test_set[:, :-1], test_set[:, -1])
-    print("\nOptimaly trained coefficiants\n", optimal_model.coef_)
-    print("\nOptimaly trained test score", optimal_test_score) 
-    print("\nTraining set compression rate:", 1-len(optimal_set)/len(train_set))
+    create_svm_model(optimal_set, test_set)
 
-    plot_data(full_train_score, accuracy, example_nb)
-    """ 
-main()
+    plot_data(full_test_score, accuracy, example_nb)
+
+
+def main_mnist():
+    """ Main function for the mnist data. 
+    Using a one vs all strategy with an SVM.
+    """
+
+    score_ratios = np.zeros(shape=(10, 1), dtype=np.float32)
+
+    for class_nb in range(10):
+
+        mnist_train, mnist_test = extract_mnist_data() # Extract data from files
+        mnist_train, mnist_test = prep_data(mnist_train, mnist_test, class_nb) # Prep data for one vs all
+
+        if mnist_train is None:
+            exit(1)
+
+        # Train model with the all the examples
+        full_test_score = create_svm_model(mnist_train, mnist_test)
+
+        # Find optimal set
+        delta = 0.1
+        N = 10000
+        set_limit = 1000
+        max_iter = 10
+
+        optimal_set, accuracy, example_nb = create_teacher_set(mnist_train, mnist_test, np.log(N/delta), set_limit)
+
+        if optimal_set is None:
+            exit(1)
+
+        # Train model with optimal set
+        optimal_test_score = create_svm_model(optimal_set, mnist_test)
+
+        score_ratios[class_nb] = optimal_test_score/full_test_score
+
+        print("Test score ratio: opt/full", score_ratios[class_nb])
+
+        #plot_data(full_test_score, accuracy, example_nb)
+
+    print("\nMean test score ratio:", np.mean(score_ratios))
+
+
+print("Select zoo or mnist:")
+data_name = input().rstrip()
+
+while data_name != "zoo" and data_name != "mnist":
+    print("Select zoo or mnist:")
+    data_name = input()
+
+if data_name == "zoo":
+    main_zoo()
+
+else:
+    main_mnist()

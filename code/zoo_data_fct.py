@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Contains the function to read and edit the data.
+Contains the function to read and edit the zoo data.
 Date: 6/3/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
@@ -37,28 +37,6 @@ def extract_zoo_data():
     
     return np.asarray(data)
 
-def extract_MNIST_data():
-    """ Extracts the data for the MNIST data files.
-    Input:
-    Output: MNIST_train -> np.array[np.array[int]], list of examples with
-                the last element the label. 
-                First dimension number of examples.
-                Second dimension features.
-            MNIST_test -> np.array[np.array[int]], list of examples with
-                the last element the label.
-                First dimension number of examples.
-                Second dimension features.
-    """
-
-    MNIST_train_data = np.load('../data/basetrain.npy')
-    MNIST_train_label = np.load('../data/labeltrain.npy')
-    MNIST_test_data = np.load('../data/basetest.npy')
-    MNIST_test_label = np.load('../data/labeltest.npy')
-
-    MNIST_train = np.append(MNIST_train_data, [MNIST_train_label], axis=0) # Add label to the features
-    MNIST_test = np.append(MNIST_test_data, [MNIST_test_label], axis=0)    # Add label to the features
-
-    return np.transpose(MNIST_train), np.transpose(MNIST_test)
 
 def sort_data(data, nb_classes):
     """ Sorts the different classes of data that contain
@@ -75,7 +53,7 @@ def sort_data(data, nb_classes):
                 Third dimension features.
     """
 
-    nb_elements = len(data[0])
+    nb_elements = len(data[0]) # Number of examples
     
     # Check for inconsistencies
     if not isinstance(nb_classes, int) and nb_classes <= 0:

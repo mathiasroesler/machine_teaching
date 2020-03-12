@@ -10,6 +10,32 @@ Mail: roesler.mathias@cmi-figure.fr
 
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn import svm
+
+
+def create_svm_model(train_set, test_set, max_iter=5000):
+    """ Creates an SVM model fitted with the train set and
+    tested with the test set.
+    Input:  train_set -> np.array[np.array[int]], list of examples with
+                the last element the label.
+                First dimension number of examples.
+                Second dimension features.
+            test_set -> np.array[np.array[int]], list of examples with
+                the last element the label.
+                First dimension number of examples.
+                Second dimension features.
+            max_iter -> int, maximum iterations for the model fitting.
+    Output: full_train_score -> float, score obtained with the train set. 
+    """
+
+    model = svm.LinearSVC(dual=False, max_iter=max_iter) # Declare SVM model
+    model.fit(train_set[:, :-1], train_set[:, -1]) # Train model with data
+    full_test_score = model.score(test_set[:, :-1], test_set[:, -1])    # Test score for fully trained model
+    print("\nSet length", len(train_set))
+    print("\nTest score", full_test_score)
+
+    return full_test_score
+
 
 def plot_data(full_train_score, accuracy, example_nb):
     """ Plots the data.
