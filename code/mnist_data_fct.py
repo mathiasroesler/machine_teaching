@@ -12,9 +12,9 @@ import numpy as np
 from numpy.random import default_rng 
 from numpy.linalg import norm
 
-def extract_mnist_data():
+def extract_mnist_data(normalize=False):
     """ Extracts the data for the mnist data files.
-    Input:
+    Input:  normalize -> boolean, normalize the data if True
     Output: mnist_train -> np.array[np.array[int]], list of examples with
                 the last element the label. 
                 First dimension number of examples.
@@ -29,10 +29,12 @@ def extract_mnist_data():
     mnist_train_label = np.load('../data/labeltrain.npy')
     mnist_test_data = np.load('../data/basetest.npy')
     mnist_test_label = np.load('../data/labeltest.npy')
-
+    
+    if normalize:
     # Normalize data
-    mnist_train_data = mnist_train_data/norm(mnist_train_data, axis=0)
-    mnist_test_data = mnist_test_data/norm(mnist_test_data, axis=0)
+        mnist_train_data = mnist_train_data/norm(mnist_train_data, axis=0)
+        mnist_test_data = mnist_test_data/norm(mnist_test_data, axis=0)
+    
 
     # Add labels
     mnist_train = np.append(mnist_train_data, [mnist_train_label], axis=0) 
