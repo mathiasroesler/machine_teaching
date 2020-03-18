@@ -85,7 +85,13 @@ def create_teacher_set(train_set, test_set, lam_coef, set_limit, max_iter=100):
         while np.sum(weights[missed_indices]) < 1:
             weights[missed_indices] = 2*weights[missed_indices] # Double weights of missed examples
             added_indices = np.where(weights[missed_indices] >= thresholds[missed_indices])[0] # Add indices of weights above threshold
-        teaching_set = np.vstack((teaching_set, train_set[added_indices])) # Add examples to the teaching set
+
+        if max_iter == 100:
+            max_cor_indices = correlation(teaching_set, train_set[added_indices])
+            teaching_set = np.vstack((teaching_set, train_set[added_indices[max_cor_indices]])) # Add examples to the teaching set
+
+        else:
+            teaching_set = np.vstack((teaching_set, train_set[added_indices]))
 
         # Fit the model with the new teaching set
         model.fit(teaching_set[:, :-1], teaching_set[:, -1])
@@ -104,3 +110,28 @@ def create_teacher_set(train_set, test_set, lam_coef, set_limit, max_iter=100):
     print("\nIteration number:", ite)
 
     return teaching_set, accuracy, example_nb
+
+
+def correlation(teaching_set, missed_set):
+    """ Calculates the correlation between the examples in the teaching set
+    and the examples that were missed.
+    Input:  teaching_set -> np.array[np.array[int]], each row is the features
+                for an example with the last element being the label.
+                First dimension number of examples.
+                Second dimension features.
+            missed_set -> np.array[np.array[int]], each row is the features
+                for a missclassified example, the last element is the label.
+                First dimension number of examples.
+                Second dimension features.
+    Output: example_indices -> np.array[int], list of indices of the examples
+                that are the most similar to the ones in the teaching set. There
+                is one for every example in the teaching set.
+    """
+    
+    cor_matrix = np.zeros(shape=(teaching_set.shape[0], missed_set.shape[0]), dtype=np.float32)
+    
+    for i in range(teaching_set.shape[0]):
+        for j in range(missed_set.shape[0]):
+            cor_matrix[i][j] = np.correlate(teaching_set[i], missed_set[j])
+
+    return np.argmin(cor_matrix, axis=1)

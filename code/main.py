@@ -62,9 +62,9 @@ def main_mnist():
 
     score_ratios = np.zeros(shape=(10, 1), dtype=np.float32)
 
-    for class_nb in range(10):
+    for class_nb in range(1):
 
-        mnist_train, mnist_test = extract_mnist_data() # Extract data from files
+        mnist_train, mnist_test = extract_mnist_data(normalize=False) # Extract data from files
         mnist_train, mnist_test = prep_data(mnist_train, mnist_test, class_nb) # Prep data for one vs all
 
         if mnist_train is None:
@@ -76,10 +76,11 @@ def main_mnist():
         # Find optimal set
         delta = 0.1
         N = 10000
-        set_limit = 1000
+        set_limit = 200
         max_iter = 10
 
-        optimal_set, accuracy, example_nb = create_teacher_set(mnist_train, mnist_test, np.log(N/delta), set_limit)
+        optimal_set, accuracy, example_nb = create_teacher_set(mnist_train, mnist_test, np.log(N/delta), set_limit, max_iter=101)
+        opt_set, acc, ex_nb = create_teacher_set(mnist_train, mnist_test, np.log(N/delta), set_limit, max_iter=100)
 
         if optimal_set is None:
             exit(1)
@@ -91,7 +92,9 @@ def main_mnist():
 
         print("Test score ratio: opt/full", score_ratios[class_nb])
 
-        #plot_data(full_test_score, accuracy, example_nb)
+        plt.plot(ex_nb, acc, 'ko-', label="Minimally correlated trained model")
+
+        plot_data(full_test_score, accuracy, example_nb)
 
     print("\nMean test score ratio:", np.mean(score_ratios))
 
