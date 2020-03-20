@@ -80,7 +80,7 @@ def main_mnist():
         max_iter = 10
 
         optimal_set, accuracy, example_nb = create_teacher_set(mnist_train, mnist_test, np.log(N/delta), set_limit, max_iter=101)
-        opt_set, acc, ex_nb = create_teacher_set(mnist_train, mnist_test, np.log(N/delta), set_limit, max_iter=100)
+        #opt_set, acc, ex_nb = create_teacher_set(mnist_train, mnist_test, np.log(N/delta), set_limit, max_iter=100)
 
         if optimal_set is None:
             exit(1)
@@ -92,7 +92,7 @@ def main_mnist():
 
         print("Test score ratio: opt/full", score_ratios[class_nb])
 
-        plt.plot(ex_nb, acc, 'ko-', label="Minimally correlated trained model")
+        #plt.plot(ex_nb, acc, 'ko-', label="Minimally correlated trained model")
 
         plot_data(full_test_score, accuracy, example_nb)
 
