@@ -59,7 +59,9 @@ def extract_mnist_data(model_type, normalize=False):
 
 def prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb):
     """ Prepares the MNIST data for a one vs all strategy.
-    Changes the labels that are not equal to class_nb to -1.
+    Changes the labels that are not equal to class_nb to -1 and the others to 1
+    for the svm. Changes the labels that are not equal to class_nb to 0 and the
+    others to 1 for the cnn.
     Returns None, None if an error occured.
     Input:  model_type -> str, {'svm', 'cnn'} model type for the student.
             mnist_train_labels -> np.array[int], list of labels associated
@@ -90,11 +92,28 @@ def prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb):
         print("Error in function prep_data: the selected class must be an integer.")
         return None, None
     
-    mnist_train_labels[np.where(mnist_train_labels != class_nb)] = -1
-    mnist_test_labels[np.where(mnist_test_labels != class_nb)] = -1
+    # Labels for the train data
+    positive_train_indices = np.where(mnist_train_labels == class_nb)[0]
+    negative_train_indices = np.where(mnist_train_labels != class_nb)[0]
+
+    # Labels for the test data
+    positive_test_indices = np.where(mnist_test_labels == class_nb)[0]
+    negative_test_indices = np.where(mnist_test_labels != class_nb)[0]
 
     if model_type == 'cnn':
+        # Change indices for the cnn student
+        mnist_train_labels[positive_train_indices] = 1
+        mnist_train_labels[negative_train_indices] = 0
+        mnist_test_labels[positive_test_indices] = 1
+        mnist_test_labels[negative_test_indices] = 0
+
         return tf.one_hot(mnist_train_labels, 2), tf.one_hot(mnist_test_labels, 2)
+
+    # Change indices for the svm student
+    mnist_train_labels[positive_train_indices] = 1
+    mnist_train_labels[negative_train_indices] = -1
+    mnist_test_labels[positive_test_indices] = 1
+    mnist_test_labels[negative_test_indices] = -1
 
     return mnist_train_labels, mnist_test_labels
 
