@@ -36,7 +36,7 @@ def main_mnist(model_type):
         # Find optimal set
         delta = 0.1
         N = 10000
-        set_limit = 2000
+        set_limit = 200
 
         optimal_data, optimal_labels, accuracy, example_nb = create_teacher_set(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, np.log(N/delta), set_limit) 
 

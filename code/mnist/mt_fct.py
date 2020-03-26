@@ -62,32 +62,32 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
     model, teaching_data, teaching_labels = teacher_initialization(model, model_type, train_data, train_labels, batch_size=batch_size, epochs=epochs)
 
     while len(teaching_data) != nb_examples and len(teaching_data) < set_limit:
-    # Exit if all of the examples are in the teaching set
+        # Exit if all of the examples are in the teaching set or enough examples in the teaching set
         missed_indices = np.array([], dtype=np.intc) # List of the indices of the missclassified examples
         added_indices = np.array([], dtype=np.intc)  # List of the indices of added examples to the teaching set
         weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
 
         # Find all the missed examples indices
-        missed_indices = np.where(model.predict(train_data) != train_labels)[0]
+        if model_type == 'cnn':
+            # For the neural network
+            missed_indices = np.where(model.predict(train_data) != train_labels)[0]
+
+        else:
+            # For the svm
+            missed_indices = np.where(model.predict(train_data) != train_labels)[0]
 
         if missed_indices.size == 0:
             # All examples are placed correctly
             break
 
-        if len(missed_indices) > batch_size:
-            added_indices = rng.choice(missed_indices, batch_size, replace=False)
+        added_indices = select_examples(missed_indices)
 
-        else:
-            added_indices = missed_indices
-
-        teaching_data = np.concatenate((teaching_data, train_data[added_indices]), axis=0)
-        teaching_labels = np.concatenate((teaching_labels, train_labels[added_indices]), axis=0)
-
-        # Fit the model with the new teaching set
-        model.fit(teaching_data, teaching_labels.ravel())
+        teaching_data, teaching_labels = update_teaching_set(model_type, teaching_data, teaching_labels, train_data, train_labels, added_indices)
         
+        model, curr_accuracy = update_model(model, model_type, teaching_data, teaching_labels, test_data, test_labels, batch_size=batch_size, epochs=epochs)
+
         # Test model accuracy
-        accuracy = np.append(accuracy, [model.score(test_data, test_labels)], axis=0)
+        accuracy = np.append(accuracy, [curr_accuracy], axis=0)
         teaching_set_len = np.append(teaching_set_len, [len(teaching_data)], axis=0)
 
         # Remove train data and labels, weights and thresholds of examples in the teaching set
@@ -196,3 +196,97 @@ def teacher_initialization(model, model_type, train_data, train_labels, batch_si
         model.fit(teaching_data, teaching_labels.ravel())
 
     return model, teaching_data, teaching_labels
+
+
+def update_teaching_set(model_type, teaching_data, teaching_labels, train_data, train_labels, added_indices):
+    """ Updates the teaching data and labels using the train data and labels and the indices of the examples
+    to be added depending on the model type.
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
+            teaching_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            teaching_labels -> np.array[int] or tf.one_hot, list of labels associated with
+                the teaching data.
+            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            train_labels -> np.array[int] or tf.one_hot, list of labels associated with
+                the train data.
+            added_indices -> np.array[int], list of indices of examples to be added to the
+                teaching set.
+    Output: teaching_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            teaching_labels -> np.array[int] or tf.one_hot, list of labels associated with
+                the teaching data.
+    """
+
+    if model_type == 'cnn':
+        # For the neural network
+        teaching_data = tf.concat([teaching_data, tf.gather(train_data, added_indices)], axis=0)
+        teaching_labels = tf.concat([teaching_labels, tf.gather(train_labels, added_indices)], axis=0)
+
+    else:
+        # For the svm
+        teaching_data = np.concatenate((teaching_data, train_data[added_indices]), axis=0)
+        teaching_labels = np.concatenate((teaching_labels, train_labels[added_indices]), axis=0)
+
+    return teaching_data, teaching_labels
+
+
+def update_model(model, model_type, teaching_data, teaching_labels, test_data, test_labels, batch_size=32, epochs=10):
+    """ Updates the student model using the teaching data and labels and evaluates the new 
+    performances with the test data and labels.
+    Input:  model -> svm or cnn model, student model.
+            model_type -> str, {'svm', 'cnn'} model used for the student.
+            teaching_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            teaching_labels -> np.array[int], list of labels associated with
+                the teaching data.
+            test_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            test_labels -> np.array[int], list of labels associated with
+                the test data.
+            batch_size -> int, number of examples used in a batch for the neural
+                network.
+            epochs -> int, number of epochs for the training of the neural network.
+    Output: model -> svm or cnn model, student model fitted with the train data.
+            accuracy -> float, score obtained with the updated model on the test data.
+    """
+
+    if model_type == 'cnn':
+        # Update model
+        model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs) 
+
+        # Test the updated model
+        accuracy = model.evaluate(test_data, test_labels, batch_size=batch_size)
+
+        return model, accuracy[1]
+
+    else:
+        # Update model
+        model.fit(teaching_data, teaching_labels.ravel())
+
+        # Test the updated model
+        accuracy = model.score(test_data, test_labels)
+
+        return model, accuracy
+
+
+def select_examples(missed_indices):
+    """ Selects the indices of the examples to be added to the teaching set.
+    Input:  missed_indices -> np.array[int], list of indices of missclassified
+                examples.
+    Output: added_indices -> np.array[int], list of indices of examples to be 
+                added to the teaching set.
+    """
+
+    if len(missed_indices) > batch_size:
+        added_indices = rng.choice(missed_indices, batch_size, replace=False)
+
+    else:
+        added_indices = missed_indices
+
+    return added_indices

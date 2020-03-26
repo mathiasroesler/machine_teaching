@@ -50,7 +50,6 @@ def extract_mnist_data(model_type, normalize=False):
         # Cast data types
         mnist_train_data = tf.dtypes.cast(mnist_train_data, dtype=tf.float32)
         mnist_test_data = tf.dtypes.cast(mnist_test_data, dtype=tf.float32)
-        print(type(mnist_train_data))
 
         return mnist_train_data, mnist_test_data, mnist_train_labels, mnist_test_labels
 
