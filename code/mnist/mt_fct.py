@@ -14,6 +14,8 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten
 from numpy.random import default_rng 
 from sklearn import svm
+from scipy.spatial import distance
+
 
 def create_teacher_set(model_type, train_data, train_labels, test_data, test_labels, lam_coef, set_limit, batch_size=32, epochs=10):
     """ Produces the optimal teaching set given the train_data and
@@ -47,7 +49,6 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
     # Variables
     ite = 0
     nb_examples = train_data.shape[0]
-    weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
     thresholds = rng.exponential(1/lam_coef, size=(nb_examples)) # Threshold for each example
     accuracy = np.array([0], dtype=np.intc) # List of accuracy at each iteration, starts with 0
     teaching_set_len = np.array([0], dtype=np.intc) # List of number of examples at each iteration, starts with 0
@@ -60,6 +61,7 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
         exit(1)
 
     model, teaching_data, teaching_labels = teacher_initialization(model, model_type, train_data, train_labels, batch_size=batch_size, epochs=epochs)
+    positive_average, negative_average = average_examples(model_type, train_data, train_labels)
 
     while len(teaching_data) != nb_examples and len(teaching_data) < set_limit:
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
@@ -68,27 +70,23 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
         weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
 
         # Find all the missed examples indices
-        if model_type == 'cnn':
-            # For the neural network
-            missed_indices = np.where(model.predict(train_data) != train_labels)[0]
-
-        else:
-            # For the svm
-            missed_indices = np.where(model.predict(train_data) != train_labels)[0]
+        missed_indices = np.unique(np.nonzero(model.predict(train_data) != train_labels)[0])
 
         if missed_indices.size == 0:
             # All examples are placed correctly
             break
 
-        added_indices = select_examples(missed_indices)
+        #added_indices = select_rndm_examples(missed_indices, 200)
+        #added_indices = select_examples(missed_indices, thresholds, weights)
+        added_indices = select_min_avg_dist(model_type, missed_indices, 200, train_data, train_labels, positive_average, negative_average)
 
         teaching_data, teaching_labels = update_teaching_set(model_type, teaching_data, teaching_labels, train_data, train_labels, added_indices)
         
         model, curr_accuracy = update_model(model, model_type, teaching_data, teaching_labels, test_data, test_labels, batch_size=batch_size, epochs=epochs)
 
         # Test model accuracy
-        accuracy = np.append(accuracy, [curr_accuracy], axis=0)
-        teaching_set_len = np.append(teaching_set_len, [len(teaching_data)], axis=0)
+        accuracy = np.concatenate((accuracy, [curr_accuracy]), axis=0)
+        teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
 
         # Remove train data and labels, weights and thresholds of examples in the teaching set
         train_data = np.delete(train_data, added_indices, axis=0)
@@ -164,12 +162,12 @@ def teacher_initialization(model, model_type, train_data, train_labels, batch_si
     
     if model_type == 'cnn':
     # The data is one_hot
-        positive_indices = np.where(train_labels == [0, 1])[0]
-        negative_indices = np.where(train_labels == [1, 0])[0]
+        positive_indices = np.nonzero(train_labels[:, 0] == 0)[0]
+        negative_indices = np.nonzero(train_labels[:, 0] == 1)[0]
 
     else:
-        positive_indices = np.where(train_labels == 1)[0]
-        negative_indices = np.where(train_labels == -1)[0]
+        positive_indices = np.nonzero(train_labels == 1)[0]
+        negative_indices = np.nonzero(train_labels == 0)[0]
 
     # Find a random positive example 
     positive_index = rng.choice(positive_indices)
@@ -275,18 +273,127 @@ def update_model(model, model_type, teaching_data, teaching_labels, test_data, t
         return model, accuracy
 
 
-def select_examples(missed_indices):
-    """ Selects the indices of the examples to be added to the teaching set.
+def select_examples(missed_indices, thresholds, weights):
+    """ Selects the indices of the examples to be added to the teaching set where
+    the weight of the example is greater than its threshold.
     Input:  missed_indices -> np.array[int], list of indices of missclassified
                 examples.
+            thresholes -> np.array[int], threshold for each example.
+            weights -> np.array[int], weight of each example.
     Output: added_indices -> np.array[int], list of indices of examples to be 
                 added to the teaching set.
     """
 
-    if len(missed_indices) > batch_size:
-        added_indices = rng.choice(missed_indices, batch_size, replace=False)
+    while np.sum(weights[missed_indices]) < 1:
+        weights[missed_indices] = 2*weights[missed_indices]
+        added_indices = np.nonzero(weights[missed_indices] >= thresholds[missed_indices])[0]
+
+    return added_indices
+
+
+def select_rndm_examples(missed_indices, max_nb):
+    """ Selects randomly the indices of the examples to be added to the teaching set.
+    Input:  missed_indices -> np.array[int], list of indices of missclassified
+                examples.
+            max_nb -> int, maximal number of examples to add.
+    Output: added_indices -> np.array[int], list of indices of examples to be 
+                added to the teaching set.
+    """
+
+    rng = default_rng() # Set random seed
+
+    if len(missed_indices) > max_nb:
+        added_indices = rng.choice(missed_indices, max_nb, replace=False)
 
     else:
         added_indices = missed_indices
 
     return added_indices
+
+
+def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_labels, positive_average, negative_average):
+    """ Selects the max_nb nearest examples to the averages. 
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
+            missed_indices -> np.array[int], list of indices of missclassified
+                examples.
+            max_nb -> int, maximal number of examples to add.
+            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            train_labels -> np.array[int], list of labels associated with the train data.
+            positive_average -> np.array[int] or tf.tensor, average positive example.
+            negative_average -> np.array[int] or tf.tensor, average negative example.
+    Output: added_indices -> np.array[int], list of indices of examples to be 
+                added to the teaching set.
+    """
+   
+    if model_type == 'cnn':
+    # For cnn student model
+        # Extract misclassified examples and labels 
+        missed_data = tf.gather(train_data, missed_indices, axis=0)
+        missed_labels = tf.gather(train_labels, missed_indices, axis=0)
+
+        # Extract indices of positive and negative misclassified examples
+        positive_indices = np.nonzero(missed_labels[:, 0] == 0)[0]
+        negative_indices = np.nonzero(missed_labels[:, 0] == 1)[0]
+
+        # Extract positive and negative missclassified examples
+        positive_examples = tf.gather(missed_data, positive_indices, axis=0)
+        negative_examples = tf.gather(missed_data, negative_indices, axis=0)
+
+        if max_nb//2 < positive_indices.shape[0]:
+            positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
+            positive_indices = np.argpartition(positive_dist, max_nb//2, axis=0)[:max_nb//2]
+
+        if max_nb//2 < negative_indices.shape[0]:
+            negative_dist = tf.norm(negative_examples-positive_average, axis=(1, 2))
+            negative_indices = np.argpartition(negative_dist, max_nb//2, axis=0)[:max_nb//2]
+
+    else:
+    # For svm student model
+        # Extract misclassified examples and labels 
+        missed_data = train_data[missed_indices]
+        missed_labels = train_labels[missed_indices]
+
+        # Extract indices of positive and negative misclassified examples
+        positive_indices = np.nonzero(missed_labels == 1)[0]
+        negative_indices = np.nonzero(missed_labels == 0)[0]
+
+        # Extract positive and negative missclassified examples
+        positive_examples = missed_data[positive_indices]
+        negative_examples = missed_data[negative_indices]
+    
+        if max_nb//2 < positive_indices.shape[0]:
+            positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
+            positive_indices = np.argpartition(positive_dist, max_nb//2, axis=0)[:max_nb//2]
+
+        if max_nb//2 < negative_indices.shape[0]:
+            negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)
+            negative_indices = np.argpartition(negative_dist, max_nb//2, axis=0)[:max_nb//2]
+
+    return np.concatenate((np.squeeze(positive_indices), np.squeeze(negative_indices)), axis=0)
+
+
+def average_examples(model_type, train_data, train_labels):
+    """ Calculates the average positive and negative examples given
+    the train data and labels.
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
+            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            train_labels -> np.array[int], list of labels associated with the train data.
+    Output: positive_average -> np.array[int] or tf.tensor, average positive example.
+            negative_average -> np.array[int] or tf.tensor, average negative example.
+    """
+
+    if model_type == 'cnn':
+    # For cnn student model
+        positive_examples = tf.gather(train_data, np.nonzero(train_labels[:, 0] == 0)[0], axis=0)
+        negative_examples = tf.gather(train_data, np.nonzero(train_labels[:, 0] == 1)[0], axis=0)
+        return tf.constant(np.mean(positive_examples, axis=0)), tf.constant(np.mean(negative_examples, axis=0))
+
+    else:
+    # For svm student model
+        positive_examples = train_data[np.nonzero(train_labels == 1)[0]]
+        negative_examples = train_data[np.nonzero(train_labels == 0)[0]]
+        return np.mean(positive_examples, axis=0), np.mean(negative_examples, axis=0)

@@ -13,18 +13,19 @@ from mt_fct import *
 from custom_fct import *
 
 
-def main_mnist(model_type):
+def main_mnist(model_type, normalize=True):
     """ Main function for the mnist data. 
     Using a one vs all strategy with an SVM or a CNN.
     Input:  model_type -> str, {'svm', 'cnn'} model used for the
                 student.
+            normalize -> bool, normalize the data if True
     """
 
     score_ratios = np.zeros(shape=(10, 1), dtype=np.float32)
 
-    for class_nb in range(10):
+    for class_nb in range(1):
 
-        mnist_train_data, mnist_test_data, mnist_train_labels, mnist_test_labels = extract_mnist_data(model_type, normalize=False) # Extract data from files
+        mnist_train_data, mnist_test_data, mnist_train_labels, mnist_test_labels = extract_mnist_data(model_type, normalize) # Extract data from files
         mnist_train_labels, mnist_test_labels = prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb) # Prep data for one vs all
 
         if mnist_train_labels is None:
@@ -36,7 +37,7 @@ def main_mnist(model_type):
         # Find optimal set
         delta = 0.1
         N = 10000
-        set_limit = 200
+        set_limit = 1000
 
         optimal_data, optimal_labels, accuracy, example_nb = create_teacher_set(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, np.log(N/delta), set_limit) 
 
@@ -64,4 +65,12 @@ while model_type != "svm" and model_type != "cnn":
     print("Select svm or cnn:")
     model_type = input().rstrip()
 
-main_mnist(model_type)
+print("Normalize data (y/n):")
+normalize = input().rstrip()
+
+if normalize == "y":
+    main_mnist(model_type, True)
+
+else:
+    main_mnist(model_type, False)
+

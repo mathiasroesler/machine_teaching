@@ -92,12 +92,12 @@ def prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb):
         return None, None
     
     # Labels for the train data
-    positive_train_indices = np.where(mnist_train_labels == class_nb)[0]
-    negative_train_indices = np.where(mnist_train_labels != class_nb)[0]
+    positive_train_indices = np.nonzero(mnist_train_labels == class_nb)[0]
+    negative_train_indices = np.nonzero(mnist_train_labels != class_nb)[0]
 
     # Labels for the test data
-    positive_test_indices = np.where(mnist_test_labels == class_nb)[0]
-    negative_test_indices = np.where(mnist_test_labels != class_nb)[0]
+    positive_test_indices = np.nonzero(mnist_test_labels == class_nb)[0]
+    negative_test_indices = np.nonzero(mnist_test_labels != class_nb)[0]
 
     if model_type == 'cnn':
         # Change indices for the cnn student
@@ -110,9 +110,9 @@ def prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb):
 
     # Change indices for the svm student
     mnist_train_labels[positive_train_indices] = 1
-    mnist_train_labels[negative_train_indices] = -1
+    mnist_train_labels[negative_train_indices] = 0
     mnist_test_labels[positive_test_indices] = 1
-    mnist_test_labels[negative_test_indices] = -1
+    mnist_test_labels[negative_test_indices] = 0
 
     return mnist_train_labels, mnist_test_labels
 
