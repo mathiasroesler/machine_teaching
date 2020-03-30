@@ -53,7 +53,9 @@ def main_mnist(model_type, normalize=True):
 
         #plt.plot(ex_nb, acc, 'ko-', label="Minimally correlated trained model")
 
-        plot_data(full_test_score, accuracy, example_nb, missed_len)
+        plot_data(full_test_score, accuracy, example_nb)
+        plt.figure()
+        plt.plot(range(len(missed_len)), missed_len, 'ko-', label="Missed example number")
 
     print("\nMean test score ratio:", np.mean(score_ratios))
 
