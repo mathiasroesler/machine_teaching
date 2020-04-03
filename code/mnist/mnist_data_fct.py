@@ -99,20 +99,14 @@ def prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb):
     positive_test_indices = np.nonzero(mnist_test_labels == class_nb)[0]
     negative_test_indices = np.nonzero(mnist_test_labels != class_nb)[0]
 
-    if model_type == 'cnn':
-        # Change indices for the cnn student
-        mnist_train_labels[positive_train_indices] = 1
-        mnist_train_labels[negative_train_indices] = 0
-        mnist_test_labels[positive_test_indices] = 1
-        mnist_test_labels[negative_test_indices] = 0
-
-        return tf.one_hot(mnist_train_labels, 2), tf.one_hot(mnist_test_labels, 2)
-
     # Change indices for the svm student
     mnist_train_labels[positive_train_indices] = 1
     mnist_train_labels[negative_train_indices] = 0
     mnist_test_labels[positive_test_indices] = 1
     mnist_test_labels[negative_test_indices] = 0
+
+    if model_type == 'cnn':
+        return tf.one_hot(mnist_train_labels, 2), tf.one_hot(mnist_test_labels, 2)
 
     return mnist_train_labels, mnist_test_labels
 

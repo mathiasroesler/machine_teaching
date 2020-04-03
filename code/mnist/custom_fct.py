@@ -10,7 +10,7 @@ Mail: roesler.mathias@cmi-figure.fr
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mt_fct import *
+from init_fct import *
 from sklearn import svm
 
 
@@ -78,7 +78,7 @@ def plot_data(full_train_score, accuracy, example_nb, missed_len):
     plt.show()
     
     plt.figure()
-    plt.plot(range(1, len(missed_len)+1), missed_len, 'ko-', label="Misclassified examples")
+    plt.plot(range(len(missed_len)), missed_len, 'ko-', label="Misclassified examples")
 
     plt.xlabel("Iteration number")
     plt.ylabel("Number of examples")
@@ -87,5 +87,23 @@ def plot_data(full_train_score, accuracy, example_nb, missed_len):
     plt.show()
     
 
+def find_indices(model_type, labels):
+    """ Returns the indices for the positive and negative examples given
+    the labels. The positive labels must be 1 and the negative ones 0.
+    Input:  model_type -> str, {svm, cnn} student model type.
+            labels -> np.array[int], labels for a given data set.
+    Output: positive_indices -> np.array[int], list of positive labels indices.
+            negative_indices -> np.array[int], list of negative labels indices.
+    """
+    
+    if model_type == 'cnn':
+    # The data is one_hot
+        positive_indices = np.nonzero(labels[:, 0] == 0)[0]
+        negative_indices = np.nonzero(labels[:, 0] == 1)[0]
 
+    else:
+        positive_indices = np.nonzero(labels == 1)[0]
+        negative_indices = np.nonzero(labels == 0)[0]
+
+    return positive_indices, negative_indices
 
