@@ -55,7 +55,7 @@ def select_rndm_examples(missed_indices, max_nb):
 
 
 def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_labels, positive_average, negative_average):
-    """ Selects the max_nb nearest examples to the averages. 
+    """ Selects the max_nb//2 positive examples nearest to the negative average and vice-versa. 
     Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
             missed_indices -> np.array[int], list of indices of missclassified
                 examples.
@@ -111,3 +111,4 @@ def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_la
             negative_indices = np.argsort(negative_dist, axis=0)[:max_nb//2]
 
     return np.concatenate((np.squeeze(positive_indices), np.squeeze(negative_indices)), axis=0)
+

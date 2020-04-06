@@ -9,7 +9,6 @@ Mail: roesler.mathias@cmi-figure.fr
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 from init_fct import *
 from sklearn import svm
 
@@ -56,37 +55,6 @@ def train_student_model(model_type, train_data, train_labels, test_data, test_la
         return test_score
 
 
-def plot_data(full_train_score, accuracy, example_nb, missed_len):
-    """ Plots the data.
-    Input:  full_train_score -> float, accuracy for the fully trained model.
-            accuracy -> np.array[int], accuracy at each iteration for
-                the optimally trained model.
-            example_nb -> np.array[int], number of examples at each 
-                iteration for the optimally trained model.
-            missed_len -> np.array[int], number of misclassified examples at
-                each iteration.
-    Output:
-    """
-
-    plt.plot(example_nb, accuracy,'bo-', label="Optimally trained model") # Plot for the optimal trained model 
-    plt.plot(example_nb, [full_train_score for i in range(len(example_nb))], 'ro-', label="Fully trained model") # Plot for the fully trained model
-
-    plt.xlabel("Teaching set size")
-    plt.ylabel("Accuracy")
-    plt.legend()
-    plt.grid(True, which="both") # Add grid
-    plt.show()
-    
-    plt.figure()
-    plt.plot(range(len(missed_len)), missed_len, 'ko-', label="Misclassified examples")
-
-    plt.xlabel("Iteration number")
-    plt.ylabel("Number of examples")
-    plt.legend()
-    plt.grid(True, which="both") # Add grid
-    plt.show()
-    
-
 def find_indices(model_type, labels):
     """ Returns the indices for the positive and negative examples given
     the labels. The positive labels must be 1 and the negative ones 0.
@@ -107,3 +75,27 @@ def find_indices(model_type, labels):
 
     return positive_indices, negative_indices
 
+
+def average_examples(model_type, data, labels):
+    """ Calculates the average positive and negative examples given
+    the train data and labels.
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
+            data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            abels -> np.array[int], list of labels associated with the data.
+    Output: positive_average -> np.array[int] or tf.tensor, average positive example.
+            negative_average -> np.array[int] or tf.tensor, average negative example.
+    """
+
+    if model_type == 'cnn':
+    # For cnn student model
+        positive_examples = tf.gather(data, np.nonzero(labels[:, 0] == 0)[0], axis=0)
+        negative_examples = tf.gather(data, np.nonzero(labels[:, 0] == 1)[0], axis=0)
+        return tf.constant(np.mean(positive_examples, axis=0)), tf.constant(np.mean(negative_examples, axis=0))
+
+    else:
+    # For svm student model
+        positive_examples = data[np.nonzero(labels == 1)[0]]
+        negative_examples = data[np.nonzero(labels == 0)[0]]
+        return np.mean(positive_examples, axis=0), np.mean(negative_examples, axis=0)

@@ -57,10 +57,14 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
     positive_average, negative_average = average_examples(model_type, train_data, train_labels)
     positive_indices, negative_indices = find_indices(model_type, train_labels)
 
-    #positive_index, negative_index = rndm_init(positive_indices, negative_indices)
-    positive_index, negative_index = min_avg_init(model_type, positive_indices, negative_indices, positive_average, negative_average, train_data)
+    positive_index, negative_index = rndm_init(positive_indices, negative_indices)
+    #positive_index, negative_index = min_avg_init(model_type, positive_indices, negative_indices, positive_average, negative_average, train_data)
 
     model, teaching_data, teaching_labels = teacher_initialization(model, model_type, train_data, train_labels, positive_index, negative_index, batch_size=batch_size, epochs=epochs)
+
+    # Remove inital examples from the data and labels
+    train_data = np.delete(train_data, [positive_index, negative_index], axis=0)
+    train_labels = np.delete(train_labels, [positive_index, negative_index], axis=0)
 
     while len(teaching_data) != nb_examples and len(teaching_data) < set_limit:
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
@@ -84,11 +88,9 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
         
         curr_accuracy = update_model(model, model_type, teaching_data, teaching_labels, test_data, test_labels, batch_size=batch_size, epochs=epochs)
 
-        """
         if model_type == 'cnn':
             # Reset the weights for the cnn model
             model = student_model(model_type)
-        """
 
         # Test model accuracy
         accuracy = np.concatenate((accuracy, [curr_accuracy]), axis=0)
@@ -180,28 +182,3 @@ def update_model(model, model_type, teaching_data, teaching_labels, test_data, t
         accuracy = model.score(test_data, test_labels)
 
         return accuracy
-
-
-def average_examples(model_type, train_data, train_labels):
-    """ Calculates the average positive and negative examples given
-    the train data and labels.
-    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
-            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
-                First dimension number of examples.
-                Second dimension features.
-            train_labels -> np.array[int], list of labels associated with the train data.
-    Output: positive_average -> np.array[int] or tf.tensor, average positive example.
-            negative_average -> np.array[int] or tf.tensor, average negative example.
-    """
-
-    if model_type == 'cnn':
-    # For cnn student model
-        positive_examples = tf.gather(train_data, np.nonzero(train_labels[:, 0] == 0)[0], axis=0)
-        negative_examples = tf.gather(train_data, np.nonzero(train_labels[:, 0] == 1)[0], axis=0)
-        return tf.constant(np.mean(positive_examples, axis=0)), tf.constant(np.mean(negative_examples, axis=0))
-
-    else:
-    # For svm student model
-        positive_examples = train_data[np.nonzero(train_labels == 1)[0]]
-        negative_examples = train_data[np.nonzero(train_labels == 0)[0]]
-        return np.mean(positive_examples, axis=0), np.mean(negative_examples, axis=0)

@@ -11,6 +11,7 @@ Mail: roesler.mathias@cmi-figure.fr
 from mnist_data_fct import *
 from mt_fct import *
 from custom_fct import *
+from plot_fct import *
 
 
 def main_mnist(model_type, normalize=True):
@@ -21,39 +22,45 @@ def main_mnist(model_type, normalize=True):
             normalize -> bool, normalize the data if True
     """
 
+    # Variables
+    delta = 0.1
+    N = 10000
+    set_limit = 1000
+    epochs = 5
     score_ratios = np.zeros(shape=(10, 1), dtype=np.float32)
 
     for class_nb in range(1):
+        # Extract data from files
+        mnist_train_data, mnist_test_data, mnist_train_labels, mnist_test_labels = extract_mnist_data(model_type, normalize) 
 
-        mnist_train_data, mnist_test_data, mnist_train_labels, mnist_test_labels = extract_mnist_data(model_type, normalize) # Extract data from files
-        mnist_train_labels, mnist_test_labels = prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb) # Prep data for one vs all
+        # Prep data for one vs all
+        mnist_train_labels, mnist_test_labels = prep_data(model_type, mnist_train_labels, mnist_test_labels, class_nb) 
 
+        # Check for errors
         if mnist_train_labels is None:
             exit(1)
 
+        positive_average, negative_average = average_examples(model_type, mnist_train_data, mnist_train_labels)
+
         # Train model with the all the examples
-        full_test_score = train_student_model(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels)
+        full_test_score = train_student_model(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, epochs=epochs)
 
         # Find optimal set
-        delta = 0.1
-        N = 10000
-        set_limit = 1000
+        optimal_data, optimal_labels, accuracy, example_nb, missed_len = create_teacher_set(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, np.log(N/delta), set_limit, epochs=epochs) 
 
-        optimal_data, optimal_labels, accuracy, example_nb, missed_len = create_teacher_set(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, np.log(N/delta), set_limit) 
-
+        # Check for errors
         if optimal_data is None:
             exit(1)
 
         # Train model with optimal set
-        optimal_test_score = train_student_model(model_type, optimal_data, optimal_labels, mnist_test_data, mnist_test_labels)
+        optimal_test_score = train_student_model(model_type, optimal_data, optimal_labels, mnist_test_data, mnist_test_labels, epochs=epochs)
 
         score_ratios[class_nb] = optimal_test_score/full_test_score
 
         print("Test score ratio: opt/full", score_ratios[class_nb])
 
-        #plt.plot(ex_nb, acc, 'ko-', label="Minimally correlated trained model")
-
         plot_data(full_test_score, accuracy, example_nb, missed_len)
+        plot_avg_dist(model_type, optimal_data, optimal_labels, positive_average, negative_average)
 
     print("\nMean test score ratio:", np.mean(score_ratios))
 
