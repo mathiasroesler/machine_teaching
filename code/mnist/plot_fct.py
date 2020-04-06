@@ -44,6 +44,9 @@ def plot_data(full_train_score, accuracy, example_nb, missed_len):
     plt.ylabel("Number of examples")
     plt.legend()
     plt.grid(True, which="both") # Add grid
+
+    # Show plots
+    plt.tight_layout()
     plt.show()
     
 
@@ -70,8 +73,9 @@ def plot_avg_dist(model_type, data, labels, positive_average, negative_average):
         positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
         negative_dist = tf.norm(negative_examples-positive_average, axis=(1, 2))
 
-        plt.plot(positive_dist, labels[positive_indices][1], 'r^', label="Positive examples")
-        plt.plot(negative_dist, labels[negative_indices][1], 'bo', label="Negative examples")
+        breakpoint()
+        plt.plot(positive_dist, tf.gather(labels, positive_indices)[:, 1], 'r^', label="Positive examples")
+        plt.plot(negative_dist, tf.gather(labels, negative_indices)[:, 1], 'bo', label="Negative examples")
 
     else:
     # For svm student model

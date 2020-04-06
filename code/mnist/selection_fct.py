@@ -110,5 +110,17 @@ def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_la
             negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)
             negative_indices = np.argsort(negative_dist, axis=0)[:max_nb//2]
 
-    return np.concatenate((np.squeeze(positive_indices), np.squeeze(negative_indices)), axis=0)
+    try:
+        added_indices = np.concatenate((np.squeeze(positive_indices), np.squeeze(negative_indices)), axis=0)
 
+    except ValueError:
+        
+        if isinstance(positive_indices, np.ndarray):
+            # If negative_indices is a scalar
+            added_indices = np.concatenate((np.squeeze(positive_indices), [negative_indices]), axis=0)
+
+        else:
+            # If positive_indices is a scalar
+            added_indices = np.concatenate(([positive_indices], np.squeeze(negative_indices)), axis=0)
+
+    return added_indices
