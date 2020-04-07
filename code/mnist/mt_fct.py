@@ -55,10 +55,9 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
     model = student_model(model_type) # Declare student model
 
     positive_average, negative_average = average_examples(model_type, train_data, train_labels)
-    positive_indices, negative_indices = find_indices(model_type, train_labels)
 
-    positive_index, negative_index = rndm_init(positive_indices, negative_indices)
-    #positive_index, negative_index = min_avg_init(model_type, positive_indices, negative_indices, positive_average, negative_average, train_data)
+    positive_index, negative_index = rndm_init(model_type, train_labels)
+    #positive_index, negative_index = min_avg_init(model_type, train_data, train_labels, positive_average, negative_average)
 
     model, teaching_data, teaching_labels = teacher_initialization(model, model_type, train_data, train_labels, positive_index, negative_index, batch_size=batch_size, epochs=epochs)
 
@@ -96,6 +95,10 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
         accuracy = np.concatenate((accuracy, [curr_accuracy]), axis=0)
         teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
 
+        if accuracy[-1] == accuracy[-2]:
+            # If the performances don't change
+            break
+
         # Remove train data and labels, weights and thresholds of examples in the teaching set
         train_data = np.delete(train_data, added_indices, axis=0)
         train_labels = np.delete(train_labels, added_indices, axis=0)
@@ -103,13 +106,54 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
         thresholds = np.delete(thresholds, added_indices, axis=0)
         ite += 1
 
-
     print("\nIteration number:", ite)
 
     return teaching_data, teaching_labels, accuracy, teaching_set_len, missed_set_len
 
 
-def update_teaching_set(model_type, teaching_data, teaching_labels, train_data, train_labels, added_indices):
+def train_student_model(model_type, train_data, train_labels, test_data, test_labels, max_iter=5000, batch_size=32, epochs=10):
+    """ Trains a student model fitted with the train set and
+    tested with the test set. Returns None if an error occured.
+    Input:  model_type -> str, {'svm', 'cnn'} model type for the student.
+            train_data -> np.array[np.array[int]] or tf.tensor, list of examples
+                First dimension number of examples.
+                Second dimension features.
+            train_labels -> np.array[int], list of labels associated with the
+                train examples.
+            test_data -> np.array[np.array[int]] or tf.tensor, list of examples
+                First dimension number of examples.
+                Second dimension features.
+            test_labels -> np.array[int], list of labels associated with the 
+                test examples.
+            max_iter -> int, maximum iterations for the model fitting.
+            batch_size -> int, number of examples used in a batch for the neural
+                network.
+            epochs -> int, number of epochs for the training of the neural network.
+    Output: test_score -> float, score obtained with the test set. 
+    """
+
+    model = student_model(model_type, max_iter=max_iter) # Declare student model
+    
+    if model == None:
+        print("Error in function train_svm_model: the model was not created.")
+        return None
+
+    print("\nSet length", len(train_data))
+
+    if model_type == 'cnn':
+        model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
+        test_score = model.evaluate(test_data, test_labels, batch_size=batch_size)
+        print("\nTest score", test_score[1])
+        return test_score[1]
+
+    else: 
+        model.fit(train_data, train_labels) # Train model with data
+        test_score = model.score(test_data, test_labels)    # Test score for fully trained model
+        print("\nTest score", test_score)
+        return test_score
+
+
+def update_teaching_set(model_type, teaching_data, teaching_labels, data, labels, added_indices):
     """ Updates the teaching data and labels using the train data and labels and the indices of the examples
     to be added depending on the model type.
     Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
@@ -118,11 +162,11 @@ def update_teaching_set(model_type, teaching_data, teaching_labels, train_data, 
                 Second dimension features.
             teaching_labels -> np.array[int] or tf.one_hot, list of labels associated with
                 the teaching data.
-            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+            data -> np.array[np.array[int]] or tf.tensor, list of examples.
                 First dimension number of examples.
                 Second dimension features.
-            train_labels -> np.array[int] or tf.one_hot, list of labels associated with
-                the train data.
+            labels -> np.array[int] or tf.one_hot, list of labels associated with
+                the data.
             added_indices -> np.array[int], list of indices of examples to be added to the
                 teaching set.
     Output: teaching_data -> np.array[np.array[int]] or tf.tensor, list of examples.
@@ -134,13 +178,13 @@ def update_teaching_set(model_type, teaching_data, teaching_labels, train_data, 
 
     if model_type == 'cnn':
     # For the neural network
-        teaching_data = tf.concat([teaching_data, tf.gather(train_data, added_indices)], axis=0)
-        teaching_labels = tf.concat([teaching_labels, tf.gather(train_labels, added_indices)], axis=0)
+        teaching_data = tf.concat([teaching_data, tf.gather(data, added_indices)], axis=0)
+        teaching_labels = tf.concat([teaching_labels, tf.gather(labels, added_indices)], axis=0)
 
     else:
     # For the svm
-        teaching_data = np.concatenate((teaching_data, train_data[added_indices]), axis=0)
-        teaching_labels = np.concatenate((teaching_labels, train_labels[added_indices]), axis=0)
+        teaching_data = np.concatenate((teaching_data, data[added_indices]), axis=0)
+        teaching_labels = np.concatenate((teaching_labels, labels[added_indices]), axis=0)
 
     return teaching_data, teaching_labels
 

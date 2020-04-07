@@ -13,6 +13,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten
 from numpy.random import default_rng 
 from sklearn import svm
+from custom_fct import *
 
 
 def student_model(model_type, max_iter=5000, dual=False):
@@ -49,15 +50,15 @@ def student_model(model_type, max_iter=5000, dual=False):
     return svm.LinearSVC(dual=dual, max_iter=max_iter) # SVM model
 
 
-def teacher_initialization(model, model_type, train_data, train_labels, positive_index, negative_index, batch_size=32, epochs=10):
+def teacher_initialization(model, model_type, data, labels, positive_index, negative_index, batch_size=32, epochs=10):
     """ Initializes the student model and the teaching set.
     Input:  model -> svm or cnn model, student model.
             model_type -> str, {'svm', 'cnn'} model used for the student.
-            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+            data -> np.array[np.array[int]] or tf.tensor, list of examples.
                 First dimension number of examples.
                 Second dimension features.
-            train_labels -> np.array[int], list of labels associated with
-                the train data.
+            labels -> np.array[int], list of labels associated with
+                the  data.
             positive_index -> int, index of the positive example to initialize the
                 teacher set.
             negative_index -> int, index of the negative example to initialize the
@@ -65,18 +66,18 @@ def teacher_initialization(model, model_type, train_data, train_labels, positive
             batch_size -> int, number of examples used in a batch for the neural
                 network.
             epochs -> int, number of epochs for the training of the neural network.
-    Output: model -> svm or cnn model, student model fitted with the train data.
+    Output: model -> svm or cnn model, student model fitted with the data.
             teaching_data -> np.array[np.array[int]] or tf.tensor, list of examples.
                 First dimension number of examples.
                 Second dimension features.
             teaching_labels -> np.array[int], labels associated with the teaching data.
     """
 
-    positive_example = train_data[positive_index] 
-    negative_example = train_data[negative_index]
+    positive_example = data[positive_index] 
+    negative_example = data[negative_index]
 
     # Add labels to teaching labels
-    teaching_labels = np.concatenate(([train_labels[positive_index]], [train_labels[negative_index]]), axis=0)
+    teaching_labels = np.concatenate(([labels[positive_index]], [labels[negative_index]]), axis=0)
 
     if model_type == 'cnn':
     # Reshape examples to concatenate them
@@ -94,16 +95,17 @@ def teacher_initialization(model, model_type, train_data, train_labels, positive
     return model, teaching_data, teaching_labels
 
 
-def rndm_init(positive_indices, negative_indices):
+def rndm_init(model_type, labels):
     """ Randomly selects an index from the positive and the negative
     index pool.
-    Input:  positive_indices -> np.array[int], list of indices for the 
-                positive examples in a data set.
-            negative_indices -> np.array[int], list of indices for the
-                negative examples in a data set.
+    Input:  model_type -> str, {'svm', 'cnn'} type of model used for the student.
+            labels -> np.array[int], list of labels associated with
+                the  data.
     Output: positive_index -> int, selected positive example index.
             negative_index -> int, selected negative example index.
     """
+
+    positive_indices, negative_indices = find_indices(model_type, labels)
 
     rng = default_rng() # Set seed 
 
@@ -116,35 +118,31 @@ def rndm_init(positive_indices, negative_indices):
     return positive_index, negative_index
 
 
-def min_avg_init(model_type, positive_indices, negative_indices, positive_average, negative_average, train_data):
+def min_avg_init(model_type, data, labels, positive_average, negative_average):
     """ Selects the index of the positive example closest to the negative average and the 
     index of the negative example closest to the positive average.
     Input:  model_type -> str, {'svm', 'cnn'} type of model used for the student.
-            positive_indices -> np.array[int], list of indices for the 
-                positive examples in a data set.
-            negative_indices -> np.array[int], list of indices for the
-                negative examples in a data set.
-            positive_average -> np.array[int] or tf.tensor, average positive example.
-            negative_average -> np.array[int] or tf.tensor, average negative example.
-            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+            data -> np.array[np.array[int]] or tf.tensor, list of examples.
                 First dimension number of examples.
                 Second dimension features.
+            labels -> np.array[int], list of labels associated with
+                the  data.
+            positive_average -> np.array[int] or tf.tensor, average positive example.
+            negative_average -> np.array[int] or tf.tensor, average negative example.
     Output: positive_index -> int, selected positive example index.
             negative_index -> int, selected negative example index.
     """
 
     if model_type == 'cnn':
         # For the neural network
-        positive_examples = tf.gather(train_data, positive_indices, axis=0)
-        negative_examples = tf.gather(train_data, negative_indices, axis=0)
+        positive_examples, negatives_examples = find_examples(model_type, data, labels)
 
         positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
         negative_dist = tf.norm(negative_examples-positive_average, axis=(1, 2))
 
     else:
         # For the svm
-        positive_examples = train_data[positive_indices]
-        negative_examples = train_data[negative_indices]
+        positive_examples, negatives_examples = find_examples(model_type, data, labels)
 
         positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
         negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)

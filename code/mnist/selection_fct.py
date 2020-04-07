@@ -77,10 +77,7 @@ def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_la
         missed_labels = tf.gather(train_labels, missed_indices, axis=0)
 
         positive_indices, negative_indices = find_indices(model_type, missed_labels)
-
-        # Extract positive and negative missclassified examples
-        positive_examples = tf.gather(missed_data, positive_indices, axis=0)
-        negative_examples = tf.gather(missed_data, negative_indices, axis=0)
+        positive_examples, negative_examples = find_examples(model_type, missed_data, missed_labels)
 
         if max_nb//2 < positive_indices.shape[0]:
             positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
@@ -97,30 +94,30 @@ def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_la
         missed_labels = train_labels[missed_indices]
 
         positive_indices, negative_indices = find_indices(model_type, missed_labels)
+        positive_examples, negative_examples = find_examples(model_type, missed_data, missed_labels)
 
-        # Extract positive and negative missclassified examples
-        positive_examples = missed_data[positive_indices]
-        negative_examples = missed_data[negative_indices]
-    
+        positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
+        negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)
+
         if max_nb//2 < positive_indices.shape[0]:
             positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
-            positive_indices = np.argsort(positive_dist, axis=0)[:max_nb//2]
+            positive_indices = positive_indices[np.argsort(positive_dist, axis=0)[:max_nb//2]]
 
         if max_nb//2 < negative_indices.shape[0]:
             negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)
-            negative_indices = np.argsort(negative_dist, axis=0)[:max_nb//2]
+            negative_indices = negative_indices[np.argsort(negative_dist, axis=0)[:max_nb//2]]
 
     try:
-        added_indices = np.concatenate((np.squeeze(positive_indices), np.squeeze(negative_indices)), axis=0)
+        added_indices = np.concatenate((np.squeeze(missed_indices[positive_indices]), np.squeeze(missed_indices[negative_indices])), axis=0)
 
     except ValueError:
         
-        if isinstance(positive_indices, np.ndarray):
+        if len(positive_indices) != 1: 
             # If negative_indices is a scalar
-            added_indices = np.concatenate((np.squeeze(positive_indices), [negative_indices]), axis=0)
+            added_indices = np.concatenate((np.squeeze(positive_indices), negative_indices), axis=0)
 
         else:
             # If positive_indices is a scalar
-            added_indices = np.concatenate(([positive_indices], np.squeeze(negative_indices)), axis=0)
+            added_indices = np.concatenate((positive_indices, np.squeeze(negative_indices)), axis=0)
 
     return added_indices

@@ -12,6 +12,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from custom_fct import *
+from scipy.spatial import distance
 
 
 def plot_data(full_train_score, accuracy, example_nb, missed_len):
@@ -66,14 +67,11 @@ def plot_avg_dist(model_type, data, labels, positive_average, negative_average):
     # For cnn student model
         positive_indices, negative_indices = find_indices(model_type, labels)
 
-        # Extract positive and negative examples from data
-        positive_examples = tf.gather(data, positive_indices, axis=0)
-        negative_examples = tf.gather(data, negative_indices, axis=0)
+        positive_examples, negative_examples = find_examples(model_type, data, labels)
 
         positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
         negative_dist = tf.norm(negative_examples-positive_average, axis=(1, 2))
 
-        breakpoint()
         plt.plot(positive_dist, tf.gather(labels, positive_indices)[:, 1], 'r^', label="Positive examples")
         plt.plot(negative_dist, tf.gather(labels, negative_indices)[:, 1], 'bo', label="Negative examples")
 
@@ -81,9 +79,7 @@ def plot_avg_dist(model_type, data, labels, positive_average, negative_average):
     # For svm student model
         positive_indices, negative_indices = find_indices(model_type, labels)
 
-        # Extract positive and negative examples from data
-        positive_examples = data[positive_indices]
-        negative_examples = data[negative_indices]
+        positive_examples, negative_examples = find_examples(model_type, data, labels)
     
         positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
         negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)
@@ -98,3 +94,16 @@ def plot_avg_dist(model_type, data, labels, positive_average, negative_average):
     plt.grid(True, which="both") # Add grid
     plt.show()
     
+
+def plot_example_dist(model_type, data, labels):
+    """ Plots the Euclidean distance between the different examples. The positive
+    and negative examples are treated seperatly.
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
+            data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            labels -> np.array[int], list of labels associated with the data.
+    Output: 
+    """
+
+ 
