@@ -61,6 +61,7 @@ def main_mnist(model_type, normalize=True):
 
         plot_data(full_test_score, accuracy, example_nb, missed_len)
         plot_avg_dist(model_type, optimal_data, optimal_labels, positive_average, negative_average)
+        plot_example_dist(model_type, optimal_data, optimal_labels)
 
     print("\nMean test score ratio:", np.mean(score_ratios))
 

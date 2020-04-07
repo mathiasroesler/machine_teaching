@@ -11,6 +11,7 @@ Mail: roesler.mathias@cmi-figure.fr
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from matplotlib import colors
 from custom_fct import *
 from scipy.spatial import distance
 
@@ -106,4 +107,43 @@ def plot_example_dist(model_type, data, labels):
     Output: 
     """
 
- 
+    positive_examples, negative_examples = find_examples(model_type, data, labels)
+
+    if model_type == 'cnn':
+        # For the neural network
+        positive_len = positive_examples.shape[0]
+        negative_len = negative_examples.shape[0]
+
+        positive_dist = np.zeros((positive_len, positive_len), dtype=np.float32)
+        negative_dist = np.zeros((negative_len, negative_len), dtype=np.float32)
+
+        for i in range(positive_len):
+            positive_dist[:, i] = np.squeeze(tf.norm(positive_examples-positive_examples[i], axis=(1, 2)))
+
+        for i in range(negative_len):
+            negative_dist[:, i] = np.squeeze(tf.norm(negative_examples-negative_examples[i], axis=(1, 2)))
+
+
+    else:
+        # For the svm
+        positive_dist = distance.cdist(positive_examples, positive_examples)
+        negative_dist = distance.cdist(negative_examples, negative_examples)
+
+    # Normalize data
+    positive_dist = positive_dist/np.max(positive_dist)
+    negative_dist = negative_dist/np.max(negative_dist)
+
+    # Plot the positive data
+    plt.subplot(1, 2, 1)
+    plt.imshow(positive_dist, cmap='plasma') # Plot data
+    plt.title('Distance between positive examples')
+    plt.colorbar()
+
+    # Plot the negative data
+    plt.subplot(1, 2, 2)
+    norm = colors.Normalize(vmin=np.min(negative_dist), vmax=np.max(negative_dist))
+    plt.imshow(negative_dist, cmap='plasma') # Plot data
+    plt.title('Distance between negative examples')
+    plt.colorbar()
+
+    plt.show()
