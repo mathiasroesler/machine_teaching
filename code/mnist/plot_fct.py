@@ -149,19 +149,21 @@ def plot_example_dist(model_type, data, labels):
     data_dist = data_dist/np.max(data_dist)
 
     # Plot the positive data
-    plt.subplot(1, 3, 1)
+    plt.figure()
     plt.imshow(positive_dist, cmap='plasma') # Plot data
     plt.title('Distance between positive examples')
     plt.colorbar(fraction=0.046, pad=0.04)
+    plt.show()
 
     # Plot the negative data
-    plt.subplot(1, 3, 2)
+    plt.figure()
     plt.imshow(negative_dist, cmap='plasma') # Plot data
     plt.title('Distance between negative examples')
     plt.colorbar(fraction=0.046, pad=0.04)
+    plt.show()
 
     # Plot the data
-    plt.subplot(1, 3, 3)
+    plt.figure()
     plt.imshow(data_dist, cmap='plasma') # Plot data
     plt.xlabel('Negative examples')
     plt.ylabel('Positive examples')

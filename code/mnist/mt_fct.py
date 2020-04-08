@@ -56,8 +56,8 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
 
     positive_average, negative_average = average_examples(model_type, train_data, train_labels)
 
-    #positive_index, negative_index = rndm_init(model_type, train_labels)
-    positive_index, negative_index = min_avg_init(model_type, train_data, train_labels, positive_average, negative_average)
+    positive_index, negative_index = rndm_init(model_type, train_labels)
+    #positive_index, negative_index = min_avg_init(model_type, train_data, train_labels, positive_average, negative_average)
 
     model, teaching_data, teaching_labels = teacher_initialization(model, model_type, train_data, train_labels, positive_index, negative_index, batch_size=batch_size, epochs=epochs)
 
