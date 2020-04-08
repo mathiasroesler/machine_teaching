@@ -79,9 +79,9 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
             # All examples are placed correctly
             break
 
-        #added_indices = select_rndm_examples(missed_indices, 200)
+        added_indices = select_rndm_examples(missed_indices, 200)
         #added_indices = select_examples(missed_indices, thresholds, weights)
-        added_indices = select_min_avg_dist(model_type, missed_indices, 200, train_data, train_labels, positive_average, negative_average)
+        #added_indices = select_min_avg_dist(model_type, missed_indices, 200, train_data, train_labels, positive_average, negative_average)
 
         teaching_data, teaching_labels = update_teaching_set(model_type, teaching_data, teaching_labels, train_data, train_labels, added_indices)
         

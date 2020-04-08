@@ -77,8 +77,8 @@ def plot_avg_dist(model_type, data, labels, positive_average, negative_average):
         negative_dist = negative_dist/np.max(negative_dist)
 
         # Plot inital example
-        plt.plot(positive_dist[0], labels[positive_indices[0]], 'gD', label='Initial example')
-        plt.plot(negative_dist[0], labels[negative_indices[0]], 'gD')
+        plt.plot(positive_dist[0], labels[positive_indices[0]], 'gD', markersize=10, label='Initial example')
+        plt.plot(negative_dist[0], labels[negative_indices[0]], 'gD', markersize=10)
 
         plt.plot(positive_dist[1:], tf.gather(labels, positive_indices)[1:, 1], 'r^', label="Positive examples")
         plt.plot(negative_dist[1:], tf.gather(labels, negative_indices)[1:, 1], 'bo', label="Negative examples")
@@ -93,8 +93,8 @@ def plot_avg_dist(model_type, data, labels, positive_average, negative_average):
         negative_dist = negative_dist/np.max(negative_dist)
 
         # Plot inital example
-        plt.plot(positive_dist[0], labels[positive_indices[0]], 'gD', label='Initial example')
-        plt.plot(negative_dist[0], labels[negative_indices[0]], 'gD')
+        plt.plot(positive_dist[0], labels[positive_indices[0]], 'gD', markersize=10, label='Initial example')
+        plt.plot(negative_dist[0], labels[negative_indices[0]], 'gD', markersize=10)
 
         plt.plot(positive_dist[1:], labels[positive_indices[1:]], 'r^', label="Positive examples")
         plt.plot(negative_dist[1:], labels[negative_indices[1:]], 'bo', label="Negative examples")
@@ -149,21 +149,24 @@ def plot_example_dist(model_type, data, labels):
     data_dist = data_dist/np.max(data_dist)
 
     # Plot the positive data
-    plt.figure()
+    plt.subplot(1, 3, 1)
+    #plt.figure()
     plt.imshow(positive_dist, cmap='plasma') # Plot data
     plt.title('Distance between positive examples')
     plt.colorbar(fraction=0.046, pad=0.04)
-    plt.show()
+    #plt.show()
 
     # Plot the negative data
-    plt.figure()
+    plt.subplot(1, 3, 2)
+    #plt.figure()
     plt.imshow(negative_dist, cmap='plasma') # Plot data
     plt.title('Distance between negative examples')
     plt.colorbar(fraction=0.046, pad=0.04)
-    plt.show()
+    #plt.show()
 
     # Plot the data
-    plt.figure()
+    plt.subplot(1, 3, 3)
+    #plt.figure()
     plt.imshow(data_dist, cmap='plasma') # Plot data
     plt.xlabel('Negative examples')
     plt.ylabel('Positive examples')
