@@ -133,17 +133,16 @@ def min_avg_init(model_type, data, labels, positive_average, negative_average):
             negative_index -> int, selected negative example index.
     """
 
+    positive_indices, negative_indices = find_indices(model_type, labels)
+    positive_examples, negative_examples = find_examples(model_type, data, labels)
+
     if model_type == 'cnn':
         # For the neural network
-        positive_examples, negatives_examples = find_examples(model_type, data, labels)
-
         positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
         negative_dist = tf.norm(negative_examples-positive_average, axis=(1, 2))
 
     else:
         # For the svm
-        positive_examples, negatives_examples = find_examples(model_type, data, labels)
-
         positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
         negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)
 

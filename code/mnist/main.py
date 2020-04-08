@@ -25,7 +25,7 @@ def main_mnist(model_type, normalize=True):
     # Variables
     delta = 0.1
     N = 10000
-    set_limit = 1000
+    set_limit = 200
     epochs = 5
     score_ratios = np.zeros(shape=(10, 1), dtype=np.float32)
 
