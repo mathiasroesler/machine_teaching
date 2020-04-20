@@ -73,12 +73,9 @@ while model_type != "svm" and model_type != "cnn":
     print("Select svm or cnn:")
     model_type = input().rstrip()
 
-print("Normalize data (y/n):")
-normalize = input().rstrip()
-
-if normalize == "y":
-    main_mnist(model_type, True)
+if model_type == 'cnn': 
+    main_mnist(model_type, False)
 
 else:
-    main_mnist(model_type, False)
+    main_mnist(model_type, True)
 
