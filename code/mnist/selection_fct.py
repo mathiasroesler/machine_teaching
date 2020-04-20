@@ -96,9 +96,6 @@ def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_la
         positive_indices, negative_indices = find_indices(model_type, missed_labels)
         positive_examples, negative_examples = find_examples(model_type, missed_data, missed_labels)
 
-        positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
-        negative_dist = np.linalg.norm(negative_examples-positive_average, axis=1)
-
         if max_nb//2 < positive_indices.shape[0]:
             positive_dist = np.linalg.norm(positive_examples-negative_average, axis=1)
             positive_indices = positive_indices[np.argsort(positive_dist, axis=0)[:max_nb//2]]
@@ -121,3 +118,62 @@ def select_min_avg_dist(model_type, missed_indices, max_nb, train_data, train_la
             added_indices = np.concatenate((positive_indices, np.squeeze(negative_indices)), axis=0)
 
     return added_indices
+
+
+def select_curriculum_examples(model_type, max_nb, train_data, train_labels, ite, overlap=0):
+    """ Selects the max_nb//2 positive and max_nb//2 negative examples  
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
+            max_nb -> int, maximal number of examples to add.
+            train_data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            train_labels -> np.array[int], list of labels associated with the train data.
+            ite -> int, 
+            overlap -> int, number of examples to reuse.
+    Output: added_indices -> np.array[int], list of indices of examples to be 
+                added to the teaching set.
+    """
+
+    if overlap >= max_nb:
+        # Check for inconsitency
+        print("Error in function select_curriculum_examples: overlap is greater than number of selected examples.")
+        return None
+
+    positive_indices, negative_indices = find_indices(model_type, train_labels)
+    positive_examples, negative_examples = find_examples(model_type, train_data, train_labels)  # Find positive and negative examples
+    positive_average, negative_average = average_examples(model_type, train_data, train_labels) # Estimate the positive and negative average
+
+    if model_type == 'cnn':
+        # For neural netowrk
+        positive_dist = tf.squeeze(tf.norm(positive_examples-positive_average, axis=(1, 2)))
+        negative_dist = tf.squeeze(tf.norm(negative_examples-negative_average, axis=(1, 2)))
+
+    else:
+        # For svm
+        positive_dist = np.linalg.norm(positive_examples-positive_average, axis=1)
+        negative_dist = np.linalg.norm(negative_examples-negative_average, axis=1)
+
+    positive_sorted_indices = np.argsort(positive_dist, kind='heapsort')
+    negative_sorted_indices = np.argsort(negative_dist, kind='heapsort')
+
+    index_block = range((ite*max_nb//2)-overlap, ((ite+1)*max_nb//2)-overlap) # Block of indices to select examples from
+
+    if index_block[0] < 0:
+        # If the first index is negative shift all indices
+        index_block = index_block + index_block[0]
+
+    if index_block[-1] > len(positive_sorted_indices):
+        # If the number of desired positive examples is to great
+        selected_positive_indices = positive_sorted_indices[index_block[0]:]
+
+    else:
+        selected_positive_indices = positive_sorted_indices[index_block]
+
+    if index_block[-1] > len(negative_sorted_indices):
+        # If the number of desired negative examples is to great
+        selected_negative_indices = negative_sorted_indices[index_block[0]:]
+
+    else:
+        selected_negative_indices = negative_sorted_indices[index_block]
+
+    return np.concatenate((positive_indices[selected_positive_indices], negative_indices[selected_negative_indices]))

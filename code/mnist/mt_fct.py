@@ -79,9 +79,10 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
             # All examples are placed correctly
             break
 
-        added_indices = select_rndm_examples(missed_indices, 200)
+        #added_indices = select_rndm_examples(missed_indices, 200)
         #added_indices = select_examples(missed_indices, thresholds, weights)
         #added_indices = select_min_avg_dist(model_type, missed_indices, 200, train_data, train_labels, positive_average, negative_average)
+        added_indices = select_curriculum_examples(model_type, 200, train_data, train_labels, ite-1)
 
         teaching_data, teaching_labels = update_teaching_set(model_type, teaching_data, teaching_labels, train_data, train_labels, added_indices)
         
@@ -95,9 +96,11 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
         accuracy = np.concatenate((accuracy, [curr_accuracy]), axis=0)
         teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
     
+        """
         if (accuracy[-1] -  accuracy[-2]) < 0.0001: 
             # If the performances don't change much
             break
+        """
 
         # Remove train data and labels, weights and thresholds of examples in the teaching set
         train_data = np.delete(train_data, added_indices, axis=0)

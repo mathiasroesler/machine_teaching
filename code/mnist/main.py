@@ -25,7 +25,7 @@ def main_mnist(model_type, normalize=True):
     # Variables
     delta = 0.1
     N = 10000
-    set_limit = 400
+    set_limit = 1000
     epochs = 5
     score_ratios = np.zeros(shape=(10, 1), dtype=np.float32)
 
@@ -39,8 +39,6 @@ def main_mnist(model_type, normalize=True):
         # Check for errors
         if mnist_train_labels is None:
             exit(1)
-
-        positive_average, negative_average = average_examples(model_type, mnist_train_data, mnist_train_labels)
 
         # Train model with the all the examples
         full_test_score = train_student_model(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, epochs=epochs)
@@ -58,6 +56,8 @@ def main_mnist(model_type, normalize=True):
         score_ratios[class_nb] = optimal_test_score/full_test_score
 
         print("Test score ratio: opt/full", score_ratios[class_nb])
+
+        positive_average, negative_average = average_examples(model_type, mnist_train_data, mnist_train_labels)
 
         plot_data(full_test_score, accuracy, example_nb, missed_len)
         plot_avg_dist(model_type, optimal_data, optimal_labels, positive_average, negative_average)

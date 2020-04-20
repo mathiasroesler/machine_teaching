@@ -77,8 +77,8 @@ def plot_avg_dist(model_type, data, labels, positive_average, negative_average):
         negative_dist = negative_dist/np.max(negative_dist)
 
         # Plot inital example
-        plt.plot(positive_dist[0], labels[positive_indices[0]], 'gD', markersize=10, label='Initial example')
-        plt.plot(negative_dist[0], labels[negative_indices[0]], 'gD', markersize=10)
+        plt.plot(positive_dist[0], labels[positive_indices[0]][1], 'gD', markersize=10, label='Initial example')
+        plt.plot(negative_dist[0], labels[negative_indices[0]][1], 'gD', markersize=10)
 
         plt.plot(positive_dist[1:], tf.gather(labels, positive_indices)[1:, 1], 'r^', label="Positive examples")
         plt.plot(negative_dist[1:], tf.gather(labels, negative_indices)[1:, 1], 'bo', label="Negative examples")

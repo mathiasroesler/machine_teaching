@@ -86,3 +86,32 @@ def average_examples(model_type, data, labels):
         positive_examples = data[np.nonzero(labels == 1)[0]]
         negative_examples = data[np.nonzero(labels == 0)[0]]
         return np.mean(positive_examples, axis=0), np.mean(negative_examples, axis=0)
+
+
+def sort_examples(model_type, data, labels):
+    """ Extracts the positive and negative examples of the data using the labels and
+    returns the sorted indices from closest to furthest to the positive and negative 
+    average example respectively.
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the student.
+            data -> np.array[np.array[int]] or tf.tensor, list of examples.
+                First dimension number of examples.
+                Second dimension features.
+            labels -> np.array[int], list of labels associated with the data.
+    Output: positive_sorted_indices -> np.array[int] or tf.tensor, sorted positive indices.
+            negative_sorted_indices -> np.array[int] or tf.tensor, sorted negative indices.
+    """
+
+    positive_examples, negative_examples = find_examples(model_type, data, labels)  # Find positive and negative examples
+    positive_average, negative_average = average_examples(model_type, data, labels) # Estimate the positive and negative average
+
+    if model_type == 'cnn':
+        # For neural netowrk
+        positive_dist = tf.squeeze(tf.norm(positive_examples-positive_average, axis=(1, 2)))
+        negative_dist = tf.squeeze(tf.norm(negative_examples-negative_average, axis=(1, 2)))
+
+    else:
+        # For svm
+        positive_dist = np.linalg.norm(positive_examples-positive_average, axis=1)
+        negative_dist = np.linalg.norm(negative_examples-negative_average, axis=1)
+
+    return np.argsort(positive_dist, kind='heapsort'), np.argsort(negative_dist, kind='heapsort')
