@@ -175,5 +175,8 @@ def select_curriculum_examples(model_type, max_nb, train_data, train_labels, ite
 
     else:
         selected_negative_indices = negative_sorted_indices[index_block]
+        #selected_negative_indices = negative_sorted_indices[index_block[0]*4:index_block[-1]*4:4]
+
+    #breakpoint()
 
     return np.concatenate((positive_indices[selected_positive_indices], negative_indices[selected_negative_indices]))

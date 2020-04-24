@@ -41,7 +41,7 @@ def student_model(model_type, max_iter=5000, dual=False):
 
         # Compile model
         model.compile(loss='categorical_crossentropy',
-                      optimizer=tf.keras.optimizers.SGD(lr=0.0001, momentum=0.9),
+                optimizer=tf.keras.optimizers.Adam(),
                       metrics=['accuracy']
                       )
 

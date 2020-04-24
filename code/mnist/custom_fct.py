@@ -75,16 +75,14 @@ def average_examples(model_type, data, labels):
             negative_average -> np.array[int] or tf.tensor, average negative example.
     """
 
+    positive_examples, negative_examples = find_examples(model_type, data, labels)
+
     if model_type == 'cnn':
     # For cnn student model
-        positive_examples = tf.gather(data, np.nonzero(labels[:, 0] == 0)[0], axis=0)
-        negative_examples = tf.gather(data, np.nonzero(labels[:, 0] == 1)[0], axis=0)
         return tf.constant(np.mean(positive_examples, axis=0)), tf.constant(np.mean(negative_examples, axis=0))
 
     else:
     # For svm student model
-        positive_examples = data[np.nonzero(labels == 1)[0]]
-        negative_examples = data[np.nonzero(labels == 0)[0]]
         return np.mean(positive_examples, axis=0), np.mean(negative_examples, axis=0)
 
 

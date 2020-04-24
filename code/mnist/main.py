@@ -12,10 +12,11 @@ from mnist_data_fct import *
 from mt_fct import *
 from custom_fct import *
 from plot_fct import *
+from curriculum_fct import *
 
 
-def main_mnist(model_type, normalize=True):
-    """ Main function for the mnist data. 
+def main_mt(model_type, normalize=True):
+    """ Main function for the mnist data and machine teaching. 
     Using a one vs all strategy with an SVM or a CNN.
     Input:  model_type -> str, {'svm', 'cnn'} model used for the
                 student.
@@ -26,7 +27,7 @@ def main_mnist(model_type, normalize=True):
     delta = 0.1
     N = 10000
     set_limit = 1000
-    epochs = 5
+    epochs = 10
     score_ratios = np.zeros(shape=(10, 1), dtype=np.float32)
 
     for class_nb in range(1):
@@ -40,9 +41,11 @@ def main_mnist(model_type, normalize=True):
         if mnist_train_labels is None:
             exit(1)
 
+        continuous_training(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, 4, epochs=epochs)
+        
         # Train model with the all the examples
         full_test_score = train_student_model(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, epochs=epochs)
-
+        """
         # Find optimal set
         optimal_data, optimal_labels, accuracy, example_nb, missed_len = create_teacher_set(model_type, mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, np.log(N/delta), set_limit, epochs=epochs) 
 
@@ -64,7 +67,16 @@ def main_mnist(model_type, normalize=True):
         plot_example_dist(model_type, optimal_data, optimal_labels)
 
     print("\nMean test score ratio:", np.mean(score_ratios))
+    """
 
+def main_curriculum(model_type, normalize=True):
+    """ Main function for the mnist data and curriculum learning. 
+    Using a one vs all strategy with an SVM or a CNN.
+    Input:  model_type -> str, {'svm', 'cnn'} model used for the
+                student.
+            normalize -> bool, normalize the data if True
+    Output:
+    """
 
 print("Select svm or cnn:")
 model_type = input().rstrip()
@@ -74,8 +86,8 @@ while model_type != "svm" and model_type != "cnn":
     model_type = input().rstrip()
 
 if model_type == 'cnn': 
-    main_mnist(model_type, False)
+    main_mt(model_type, False)
 
 else:
-    main_mnist(model_type, True)
+    main_mt(model_type, True)
 
