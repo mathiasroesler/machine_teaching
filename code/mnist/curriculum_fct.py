@@ -81,10 +81,12 @@ def continuous_training(model_type, train_data, train_labels, test_data, test_la
             batch_size -> int, number of examples used in a batch for the neural
                 network.
             epochs -> int, number of epochs for the training of the neural network.
-    Output: 
+    Output: accuracies -> np.array[float], accuracy at each iteration. 
     """
 
     model = student_model(model_type)
+    accuracies = np.zeros(iteration+1, dtype=np.float32)
+    acc_hist = np.array([], dtype=np.float32)
 
     positive_distances, positive_sorted_indices, negative_distances, negative_sorted_indices = create_curriculum(model_type, train_data, train_labels)
     positive_examples, negative_examples = find_examples(model_type, train_data, train_labels)
@@ -100,9 +102,10 @@ def continuous_training(model_type, train_data, train_labels, test_data, test_la
             data  = tf.concat([positive_data, negative_data], axis=0)
             labels = tf.one_hot(np.concatenate((np.ones(positive_data.shape[0], dtype=np.intc), np.zeros(negative_data.shape[0], dtype=np.intc))), 2)
 
-            model.fit(data, labels, batch_size=batch_size, epochs=epochs)
+            hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs)
+            acc_hist = np.concatenate((acc_hist, hist.history.get('accuracy')), axis=0)
             accuracy = model.evaluate(test_data, test_labels, batch_size=batch_size)
-            print("Iteration ", i, ": ", accuracy[1])
+            accuracies[i] = accuracy[1] 
 
         else:
             # For svm
@@ -112,7 +115,9 @@ def continuous_training(model_type, train_data, train_labels, test_data, test_la
             labels = np.concatenate((np.ones(positive_data.shape[0], dtype=np.intc), np.zeros(negative_data.shape[0], dtype=np.intc)))
 
             model.fit(data, labels.ravel())
-            print("Iteration ", i, ": ", model.score(test_data, test_labels))
+            accuracies[i] = model.score(test_data, test_labels)
+    
+    return [acc_hist, accuracies]
 
 
 def discret_training(model_type, train_data, train_labels, test_data, test_labels, batch_size=32, epochs=10):

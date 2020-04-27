@@ -37,7 +37,7 @@ def plot_data(full_train_score, accuracy, example_nb, missed_len):
     plt.ylabel("Accuracy")
     plt.legend()
     plt.grid(True, which="both") # Add grid
-    
+
     # Plot number of missclassified examples as a function of iteration
     plt.subplot(1, 2, 2)
     plt.plot(range(len(missed_len)), missed_len, 'ko-', label="Misclassified examples")
@@ -175,3 +175,29 @@ def plot_example_dist(model_type, data, labels):
 
     plt.show()
 
+
+def plot_comp(full_acc, cur_acc, mt_acc):
+    """ Plot the comparaison between curriculum learning and machine
+    teaching accuracies.
+    Input:  full_acc -> np.array[float], accuracy for the fully trained model.
+            cur_acc -> np.array[float], accuracy for the curriculum learning at
+            each iteration.
+            mt_acc -> np.array[float], accuracy for the machine teaching at each
+            iteration.
+    Output:
+    """
+
+    assert(len(cur_acc) == len(mt_acc) == len(full_acc))
+
+    max_ite = len(full_acc)
+
+    plt.plot(range(max_ite), full_acc, 'ro-', label="Fully trained model") 
+    plt.plot(range(max_ite), mt_acc, 'bo-', label="Machine teaching model") 
+    plt.plot(range(max_ite), cur_acc, 'go-', label="Curriculum learning model")
+
+    plt.xlabel("Iteration number")
+    plt.ylabel("Accuracy")
+    plt.legend()
+    plt.grid(True, which="both") # Add grid
+    
+    plt.show()

@@ -96,11 +96,11 @@ def create_teacher_set(model_type, train_data, train_labels, test_data, test_lab
         accuracy = np.concatenate((accuracy, [curr_accuracy]), axis=0)
         teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
     
-        """ 
-        if (accuracy[-1] -  accuracy[-2]) < 0.0001: 
+         
+        if abs((accuracy[-1] - accuracy[-2])) < 0.001: 
             # If the performances don't change much
             break
-        """ 
+         
 
         # Remove train data and labels, weights and thresholds of examples in the teaching set
         #train_data = np.delete(train_data, added_indices, axis=0)
@@ -144,10 +144,10 @@ def train_student_model(model_type, train_data, train_labels, test_data, test_la
     print("\nSet length", len(train_data))
 
     if model_type == 'cnn':
-        model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
+        hist = model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
         test_score = model.evaluate(test_data, test_labels, batch_size=batch_size)
         print("\nTest score", test_score[1])
-        return test_score[1]
+        return [np.array(hist.history.get('accuracy'), dtype=np.float32), test_score[1]]
 
     else: 
         model.fit(train_data, train_labels) # Train model with data

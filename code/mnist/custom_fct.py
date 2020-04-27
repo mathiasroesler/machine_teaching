@@ -113,3 +113,29 @@ def sort_examples(model_type, data, labels):
         negative_dist = np.linalg.norm(negative_examples-negative_average, axis=1)
 
     return np.argsort(positive_dist, kind='heapsort'), np.argsort(negative_dist, kind='heapsort')
+
+
+def estimate_average(full_list, cur_list, mt_list, iterations):
+    """ Estimates the average accuracies for curriculum learning and 
+    machine teaching after a certain number of iterations.
+    Input:  full_list -> list[np.array[float]], list of accuracies at each iteration for
+            fully trained model.
+            cur_list -> list[np.array[float]], list of accuracies at each iteration for
+            curriculum learning.
+            mt_list -> list[np.array[float]], list of accuracies at each iteration for
+            machine teaching.
+            iterations -> int, number of iterations to average on.
+    Output: full_avg -> np.array[float], list of averaged accuracies for the fully trained
+            model.
+            cur_avg -> np.array[float], list of averaged accuracies for curriculum learning.
+            mt_avg -> np.array[float], list of averaged accuracies for machine teaching.
+    """
+
+    assert(len(cur_list) == len(mt_list) == len(full_list))
+
+    max_ite = len(full_list)
+
+    for i in range(max_ite):
+        assert(len(full_list[i]) == len(cur_list[i]) == len(mt_list[i]))
+
+    return np.mean(full_list, axis=0), np.mean(cur_list, axis=0), np.mean(mt_list, axis=0)
