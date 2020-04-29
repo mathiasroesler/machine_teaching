@@ -15,10 +15,11 @@ from plot_fct import *
 from curriculum_fct import *
 
 
-def main(normalize=True):
+def main(data_name):
     """ Main function for the mnist data and machine teaching. 
     Using a one vs all strategy with an SVM model.
-    Input: normalize -> bool, normalize the data if True
+    Input:  data_name -> str {'cifar', 'mnist'}, name of the data to
+            extract.
     """
 
     # Variables
@@ -30,29 +31,29 @@ def main(normalize=True):
 
     for i in range(iteration_nb):
         # Extract data from files
-        mnist_train_data, mnist_test_data, mnist_train_labels, mnist_test_labels = extract_mnist_data(normalize) 
+        train_data, test_data, train_labels, test_labels = extract_data(data_name) 
 
         # Prep data for one vs all
-        mnist_train_labels, mnist_test_labels = prep_data(mnist_train_labels, mnist_test_labels, class_nb) 
+        train_labels, test_labels = prep_data(train_labels, test_labels, class_nb) 
 
         # Check for errors
-        if mnist_train_labels is None:
+        if train_labels is None:
             exit(1)
     
         # Train model with curriculum
         print("\nCurriculum training")
-        cur_accuracies = continuous_training(mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, 3)
+        cur_accuracies = continuous_training(train_data, train_labels, test_data, test_labels, 3)
 
         print("Final accuracy on test data: ", cur_accuracies[-1])
         
         # Train model with the all the examples
         print("\nFull training")
-        full_accuracy = train_student_model(mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels)
+        full_accuracy = train_student_model(train_data, train_labels, test_data, test_labels)
 
         print("Final accuracy on test data: ", full_accuracy)
         
         # Find optimal set
-        optimal_data, optimal_labels, mt_train_accuracies, example_nb, missed_len = create_teacher_set(mnist_train_data, mnist_train_labels, mnist_test_data, mnist_test_labels, np.log(N/delta), set_limit) 
+        optimal_data, optimal_labels, mt_train_accuracies, example_nb, missed_len = create_teacher_set(train_data, train_labels, test_data, test_labels, np.log(N/delta), set_limit) 
 
         
         # Check for errors
@@ -61,12 +62,12 @@ def main(normalize=True):
 
         # Train model with optimal set
         print("\nMachine teaching training")
-        mt_accuracy = train_student_model(optimal_data, optimal_labels, mnist_test_data, mnist_test_labels)
-        #optimal_test_score = continuous_training(optimal_data, optimal_labels, mnist_test_data, mnist_test_labels, 3)
+        mt_accuracy = train_student_model(optimal_data, optimal_labels, test_data, test_labels)
+        #optimal_test_score = continuous_training(optimal_data, optimal_labels, test_data, test_labels, 3)
 
         print("Final accuracy on test data: ", mt_accuracy)
 
-        #positive_average, negative_average = average_examples(mnist_train_data, mnist_train_labels)
+        #positive_average, negative_average = average_examples(train_data, train_labels)
 
         """
         plot_data(full_accuracy, accuracy, example_nb, missed_len)
@@ -74,4 +75,11 @@ def main(normalize=True):
         plot_example_dist(optimal_data, optimal_labels)
         """
 
-main(True)
+print("Select cifar or mnist:")
+data_name = input().rstrip()
+
+while data_name != "cifar" and data_name != "mnist":
+    print("Select cifar or mnsit:")
+    data_name = input().rstrip()
+
+main(data_name)
