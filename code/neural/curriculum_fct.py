@@ -81,7 +81,6 @@ def continuous_training(train_data, train_labels, test_data, test_labels, iterat
     """
 
     model = student_model(train_data[0].shape)
-    accuracies = np.zeros(iteration+1, dtype=np.float32)
     acc_hist = np.array([], dtype=np.float32)
 
     positive_distances, positive_sorted_indices, negative_distances, negative_sorted_indices = create_curriculum(train_data, train_labels)
@@ -99,6 +98,5 @@ def continuous_training(train_data, train_labels, test_data, test_labels, iterat
         hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs)
         acc_hist = np.concatenate((acc_hist, hist.history.get('accuracy')), axis=0)
         accuracy = model.evaluate(test_data, test_labels, batch_size=batch_size)
-        accuracies[i] = accuracy[1] 
 
-    return [acc_hist, accuracies]
+    return np.append(acc_hist, [accuracy[1]], axis=0)

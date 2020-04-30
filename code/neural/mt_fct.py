@@ -144,7 +144,7 @@ def train_student_model(train_data, train_labels, test_data, test_labels, batch_
             batch_size -> int, number of examples used in a batch for the neural
                 network.
             epochs -> int, number of epochs for the training of the neural network.
-    Output: test_score -> float, score obtained with the test set. 
+    Output: accuracies -> np.array[float32], accuracies for the training and the test. 
     """
 
     model = student_model(train_data[0].shape) # Declare student model
@@ -157,8 +157,8 @@ def train_student_model(train_data, train_labels, test_data, test_labels, batch_
 
     hist = model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
     test_score = model.evaluate(test_data, test_labels, batch_size=batch_size)
-    print("\nTest score", test_score[1])
-    return [np.array(hist.history.get('accuracy'), dtype=np.float32), test_score[1]]
+
+    return np.array(np.append(hist.history.get('accuracy'), [test_score[1]]), dtype=np.float32)
 
 
 def update_teaching_set(teaching_data, teaching_labels, data, labels, added_indices):

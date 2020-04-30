@@ -26,12 +26,12 @@ def main(data_name):
     delta = 0.1
     N = 10000
     set_limit = 1000
-    epochs = 6
+    epochs = 12
     class_nb = 0
     iteration_nb = 1
-    mt_list = []   # List containing the accuracies of an iterarion for machine teaching
-    cur_list = []  # List containing the accuracies of an iteration for curriculum learning
-    full_list = [] # List containing the accuracies of an iteration for fully trained model 
+    mt_accuracies = np.zeros(epochs+1, dtype=np.float32)   # List containing the accuracies for machine teaching
+    cur_accuracies = np.zeros(epochs+1, dtype=np.float32)  # List containing the accuracies for curriculum learning
+    full_accuracies = np.zeros(epochs+1, dtype=np.float32) # List containing the accuracies for fully trained model 
 
     for i in range(iteration_nb):
         # Extract data from files
@@ -44,39 +44,29 @@ def main(data_name):
         if train_labels is None:
             exit(1)
 
-        cur_accuracy = continuous_training(train_data, train_labels, test_data, test_labels, 3, epochs=epochs//3)
+        # Train model with curriculum
+        print("\nCurriculum training")
+        cur_accuracies += continuous_training(train_data, train_labels, test_data, test_labels, 3, epochs=epochs//3)
         
         # Train model with the all the examples
-        full_test_score = train_student_model(train_data, train_labels, test_data, test_labels, epochs=epochs)
+        print("\nFull training")
+        full_accuracies += train_student_model(train_data, train_labels, test_data, test_labels, epochs=epochs)
         
         # Find optimal set
-        optimal_data, optimal_labels, mt_accuracy, example_nb, missed_len = create_teacher_set(train_data, train_labels, test_data, test_labels, np.log(N/delta), set_limit, epochs=1) 
+        print("\nGenerating optimal set")
+        optimal_data, optimal_labels, mt_accuracy, example_nb, missed_len = create_teacher_set(train_data, train_labels, test_data, test_labels, np.log(N/delta), set_limit, epochs=epochs//3) 
 
         
         # Check for errors
         if optimal_data is None:
             exit(1)
 
-        # Train model with optimal set
-        optimal_test_score = train_student_model(optimal_data, optimal_labels, test_data, test_labels, epochs=epochs)
-        #optimal_test_score = continuous_training(optimal_data, optimal_labels, test_data, test_labels, 3, epochs=epochs//3)
+        # Train model with teaching set
+        print("\nMachine teaching training")
+        mt_accuracies += train_student_model(optimal_data, optimal_labels, test_data, test_labels, epochs=epochs)
+        #mt_accuracies = continuous_training(optimal_data, optimal_labels, test_data, test_labels, 3, epochs=epochs//3)
 
-        mt_list.append(optimal_test_score[0]) # Append the accuracy of the machine teaching training
-        cur_list.append(cur_accuracy[0])      # Append the accuracy of the curriculum learning training
-        full_list.append(full_test_score[0])  # Append the accuracy of the full training
-
-        #positive_average, negative_average = average_examples(train_data, train_labels)
-        #plot_comp(full_test_score, cur_accuracy, mt_accuracy, example_nb[-1])
-
-        """
-        plot_data(full_test_score, accuracy, example_nb, missed_len)
-        plot_avg_dist(optimal_data, optimal_labels, positive_average, negative_average)
-        plot_example_dist(optimal_data, optimal_labels)
-        """
-
-    full_avg, cur_avg, mt_avg = estimate_average(full_list, cur_list, mt_list, iteration_nb)
-
-    plot_comp(full_avg, cur_avg, mt_avg)
+    plot_comp(full_accuracies[:-1]/iteration_nb, cur_accuracies[:-1]/iteration_nb, mt_accuracies[:-1]/iteration_nb)
 
 print("Select cifar or mnist:")
 data_name = input().rstrip()
