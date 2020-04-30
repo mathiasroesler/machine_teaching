@@ -59,7 +59,7 @@ def create_teacher_set(train_data, train_labels, test_data, test_labels, lam_coe
     accuracy = np.array([0], dtype=np.intc) # List of accuracy at each iteration, starts with 0
     teaching_set_len = np.array([0], dtype=np.intc) # List of number of examples at each iteration, starts with 0
     missed_set_len = np.array([len(train_data)], dtype=np.intc) # List of number of misclassified examples at each iteration
-    model = student_model() # Declare student model
+    model = student_model(train_data[0].shape) # Declare student model
 
     positive_average, negative_average = average_examples(train_data, train_labels)
 
@@ -96,7 +96,7 @@ def create_teacher_set(train_data, train_labels, test_data, test_labels, lam_coe
         curr_accuracy = update_model(model, teaching_data, teaching_labels, test_data, test_labels, batch_size=batch_size, epochs=epochs)
 
         # Reset the weights for the cnn model
-        model = student_model()
+        model = student_model(train_data[0].shape)
 
         # Test model accuracy
         accuracy = np.concatenate((accuracy, [curr_accuracy]), axis=0)
@@ -147,7 +147,7 @@ def train_student_model(train_data, train_labels, test_data, test_labels, batch_
     Output: test_score -> float, score obtained with the test set. 
     """
 
-    model = student_model() # Declare student model
+    model = student_model(train_data[0].shape) # Declare student model
     
     if model == None:
         print("Error in function train_student_model: the model was not created.")

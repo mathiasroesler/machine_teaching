@@ -15,17 +15,20 @@ from numpy.random import default_rng
 from custom_fct import *
 
 
-def student_model():
+def student_model(data_shape):
     """ Returns the student model used.
-    Input:  
+    Input:  data_shape -> tuple[int], shape of the input data. 
     Output: model -> CNN model
     """
 
     model = tf.keras.models.Sequential() # Sequential neural network
 
     # Add layers to model
-    model.add(ZeroPadding2D(2, input_shape=(28, 28, 1)))
-    model.add(Conv2D(6, (5, 5), activation='relu'))
+    if (data_shape == (28, 28, 1)):
+        # Pad the input to be 32x32
+        model.add(ZeroPadding2D(2, input_shape=data_shape))
+
+    model.add(Conv2D(6, (5, 5), activation='relu', input_shape=(32, 32, 1)))
     model.add(MaxPool2D(pool_size=(2, 2)))
     model.add(Conv2D(16, (5, 5), activation='relu'))
     model.add(MaxPool2D(pool_size=(2, 2)))
@@ -72,6 +75,7 @@ def teacher_initialization(model, data, labels, positive_index, negative_index, 
                 Second dimension, one hot label.
     """
 
+    data_shape = data[0].shape
     positive_example = data[positive_index] 
     negative_example = data[negative_index]
 
@@ -79,8 +83,8 @@ def teacher_initialization(model, data, labels, positive_index, negative_index, 
     teaching_labels = np.concatenate(([labels[positive_index]], [labels[negative_index]]), axis=0)
 
     # Reshape examples to concatenate them
-    positive_example = tf.reshape(positive_example, shape=(1, 28, 28, 1))
-    negative_example = tf.reshape(negative_example, shape=(1, 28, 28, 1))
+    positive_example = tf.reshape(positive_example, shape=(1, data_shape[0], data_shape[1], 1))
+    negative_example = tf.reshape(negative_example, shape=(1, data_shape[0], data_shape[1], 1))
 
     # Concatenate examples
     teaching_data = tf.concat([positive_example, negative_example], axis=0)   

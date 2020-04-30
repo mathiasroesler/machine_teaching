@@ -80,7 +80,7 @@ def continuous_training(train_data, train_labels, test_data, test_labels, iterat
     Output: accuracies -> np.array[float], accuracy at each iteration. 
     """
 
-    model = student_model()
+    model = student_model(train_data[0].shape)
     accuracies = np.zeros(iteration+1, dtype=np.float32)
     acc_hist = np.array([], dtype=np.float32)
 

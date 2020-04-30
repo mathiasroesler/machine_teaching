@@ -41,8 +41,8 @@ def extract_data(data_name):
         train, test = tf.keras.datasets.cifar10.load_data()
 
         # Convert data to grayscale
-        train_data = np.squeeze(tf.image.rgb_to_grayscale(train[0])) 
-        test_data = np.squeeze(tf.image.rgb_to_grayscale(test[0]))
+        train_data = tf.image.rgb_to_grayscale(train[0]) 
+        test_data = tf.image.rgb_to_grayscale(test[0])
 
     else:
         # Extract mnist data and labels and reshape
