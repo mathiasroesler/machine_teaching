@@ -45,6 +45,8 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
 
     # Variables
     ite = 1
+    old_acc = 0
+    eps = 10e-3
     nb_examples = train_data.shape[0]
     thresholds = rng.exponential(1/lam_coef, size=(nb_examples)) # Threshold for each example
     accuracy = np.array([0], dtype=np.intc) # List of accuracy at each iteration, starts with 0
@@ -52,10 +54,7 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
     missed_set_len = np.array([len(train_data)], dtype=np.intc) # List of number of misclassified examples at each iteration
     model = student_model(train_data[0].shape) # Declare student model
 
-    positive_average, negative_average = average_examples(train_data, train_labels)
-
-    positive_index, negative_index = rndm_init(train_labels)
-    #positive_index, negative_index = min_avg_init(train_data, train_labels, positive_average, negative_average)
+    positive_index, negative_index = rndm_init(train_labels) # Find index of intial examples
 
     model, teaching_data, teaching_labels = teacher_initialization(model, train_data, train_labels, positive_index, negative_index, batch_size=batch_size, epochs=epochs)
 
@@ -82,23 +81,30 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
         #added_indices = select_min_avg_dist(missed_indices, 200, train_data, train_labels, positive_average, negative_average)
         #added_indices = select_curriculum_examples(200, train_data, train_labels, ite-1)
 
+        # Update the teacher set and add length to list
         teaching_data, teaching_labels = update_teaching_set(teaching_data, teaching_labels, train_data, train_labels, added_indices)
-        
+        teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
+    
         # Update model
-        model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs) 
+        hist = model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs) 
+        new_acc = np.sum(hist.history.get('accuracy'))/epochs
+
+        if (abs(new_acc-old_acc) < eps):
+            # Avoid overlearning
+            break
+
+        old_acc = new_acc
 
         # Reset the weights for the cnn model
         #model = student_model(train_data[0].shape)
 
-        # Add new length of teacher set
-        teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
-    
-
+        """
         # Remove train data and labels, weights and thresholds of examples in the teaching set
-        #train_data = np.delete(train_data, added_indices, axis=0)
-        #train_labels = np.delete(train_labels, added_indices, axis=0)
-        #weights = np.delete(weights, added_indices, axis=0)
-        #thresholds = np.delete(thresholds, added_indices, axis=0)
+        train_data = np.delete(train_data, added_indices, axis=0)
+        train_labels = np.delete(train_labels, added_indices, axis=0)
+        weights = np.delete(weights, added_indices, axis=0)
+        thresholds = np.delete(thresholds, added_indices, axis=0)
+        """
         ite += 1
 
     print("\nIteration number:", ite)

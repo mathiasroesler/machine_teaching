@@ -91,7 +91,7 @@ def main(data_name):
     mt_accuracies = mt_accuracies/iteration_nb
 
     print("Test accuracies: curriculum ", cur_accuracies[-1], " machine teaching ", mt_accuracies[-1], " full ", full_accuracies[-1])
-    print("Times : curriculum : %.2f" % times[0], " machine teaching %.2f" % times[1], " full %.2f" % times[2])
+    print("Times : curriculum : %.2f" % times[0], "s machine teaching %.2f" % times[1], "s full %.2f" % times[2], "s")
     plot_comp(full_accuracies[:-1], cur_accuracies[:-1], mt_accuracies[:-1])
 
 print("Select cifar or mnist:")

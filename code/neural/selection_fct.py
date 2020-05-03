@@ -92,7 +92,6 @@ def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positi
         added_indices = np.concatenate((np.squeeze(missed_indices[positive_indices]), np.squeeze(missed_indices[negative_indices])), axis=0)
 
     except ValueError:
-        
         if len(positive_indices) != 1: 
             # If negative_indices is a scalar
             added_indices = np.concatenate((np.squeeze(positive_indices), negative_indices), axis=0)
@@ -155,6 +154,5 @@ def select_curriculum_examples(max_nb, train_data, train_labels, ite, overlap=0)
 
     else:
         selected_negative_indices = negative_sorted_indices[index_block]
-        #selected_negative_indices = negative_sorted_indices[index_block[0]*4:index_block[-1]*4:4]
 
     return np.concatenate((positive_indices[selected_positive_indices], negative_indices[selected_negative_indices]))
