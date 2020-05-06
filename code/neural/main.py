@@ -10,10 +10,10 @@ Mail: roesler.mathias@cmi-figure.fr
 
 from time import process_time
 from data_fct import *
-from mt_fct import *
+from training_fct import *
+from strategies import *
 from custom_fct import *
 from plot_fct import *
-from curriculum_fct import *
 
 
 def main(data_name):
@@ -27,7 +27,7 @@ def main(data_name):
     delta = 0.1
     N = 10000
     set_limit = 1000
-    epochs = 10 
+    epochs = 6 
     class_nb = 3
     iteration_nb = 1
     mt_accuracies = np.zeros(epochs+1, dtype=np.float32)   # List containing the accuracies for machine teaching
@@ -41,11 +41,11 @@ def main(data_name):
 
         # Prepare test data labels
         test_labels = prep_data(test_labels, class_nb)
-        
+
         # Train model with curriculum
         print("\nCurriculum training")
         tic = process_time()
-        cur_accuracies += class_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs)
+        cur_accuracies += curriculum_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs)
         toc = process_time()
 
         # Add curriculum time
@@ -57,11 +57,11 @@ def main(data_name):
         # Find optimal set
         print("\nGenerating optimal set")
         tic = process_time()
-        optimal_data, optimal_labels, example_nb, missed_len = create_teacher_set(train_data, train_labels, np.log(N/delta), set_limit, epochs=3) 
+        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, np.log(N/delta), set_limit, epochs=3) 
 
         # Train model with teaching set
         print("\nMachine teaching training")
-        mt_accuracies += train_student_model(optimal_data, optimal_labels, test_data, test_labels, epochs=epochs)
+        mt_accuracies += classic_training(optimal_data, optimal_labels, test_data, test_labels, epochs=epochs)
         toc = process_time()
 
         # Add machine teaching time
@@ -71,7 +71,7 @@ def main(data_name):
         # Train model with the all the examples
         print("\nFull training")
         tic = process_time()
-        full_accuracies += train_student_model(train_data, train_labels, test_data, test_labels, epochs=epochs)
+        full_accuracies += classic_training(train_data, train_labels, test_data, test_labels, epochs=epochs)
         toc = process_time()
 
         # Add full training time

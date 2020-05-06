@@ -15,8 +15,8 @@ from numpy.random import default_rng
 from custom_fct import *
 
 
-def student_model(data_shape):
-    """ Returns the student model used.
+def model_init(data_shape):
+    """ Initializes the model.
     Input:  data_shape -> tuple[int], shape of the input data. 
     Output: model -> CNN model
     """
@@ -46,72 +46,29 @@ def student_model(data_shape):
     return model
 
 
-def teacher_initialization(model, data, labels, positive_index, negative_index, batch_size=32, epochs=10):
-    """ Initializes the student model and the teaching set.
-    Input:  model -> cnn model, student model.
-            data -> tf.tensor[float32], list of examples.
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            labels -> tf.tensor[int], list of labels associated
-                with the data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
-            positive_index -> int, index of the positive example to initialize the
-                teacher set.
-            negative_index -> int, index of the negative example to initialize the
-                teacher set.
-            batch_size -> int, number of examples used in a batch for the neural
-                network.
-            epochs -> int, number of epochs for the training of the neural network.
-    Output: model -> cnn model, student model fitted with the data.
-            teaching_data -> tf.tensor[float32], list of examples.
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            teaching_labels -> tf.tensor[int], list of labels associated
-                with the teaching data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
-    """
-
-    data_shape = data[0].shape
-    positive_example = data[positive_index] 
-    negative_example = data[negative_index]
-
-    # Add labels to teaching labels
-    teaching_labels = np.concatenate(([labels[positive_index]], [labels[negative_index]]), axis=0)
-
-    # Reshape examples to concatenate them
-    positive_example = tf.reshape(positive_example, shape=(1, data_shape[0], data_shape[1], 1))
-    negative_example = tf.reshape(negative_example, shape=(1, data_shape[0], data_shape[1], 1))
-
-    # Concatenate examples
-    teaching_data = tf.concat([positive_example, negative_example], axis=0)   
-    model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs) 
-
-    return model, teaching_data, teaching_labels
-
-
 def rndm_init(labels):
-    """ Randomly selects an index from the positive and the negative
-    index pool.
-    Input:  labels -> tf.tensor[int], list of labels associated
+    """ Randomly selects an index for each class. The label associated
+    with the first class must be 0.
+    Input:  labels -> np.array[int] | tf.tensor[int], list of labels associated
                 with the data.
                 First dimension, number of examples.
-                Second dimension, one hot label.
-    Output: positive_index -> int, selected positive example index.
-            negative_index -> int, selected negative example index.
+                Second dimension, label | one hot label.
+    Output: init_indices -> np.array[int], list of indices of the 
+                initial example to be used for each class.
     """
 
-    positive_indices, negative_indices = find_indices(labels)
+    if tf.is_tensor(labels):
+        # If the labels are one hot convert to simple labels
+        labels = np.argmax(labels, axis=1)
 
     rng = default_rng() # Set seed 
 
-    # Find a random positive example 
-    positive_index = rng.choice(positive_indices)
-    
-    # Find a random negative example
-    negative_index = rng.choice(negative_indices)
+    indices = find_indices(labels)
+    max_class_nb = np.max(labels)
+    init_indices = np.zeros(max_class_nb+1, dtype=np.intc) # List of initial examples indices
 
-    return positive_index, negative_index
+    for i in range(max_class_nb+1):
+        # Randomly select an index for each class
+        init_indices[i] = rng.choice(indices[i])
+
+    return init_indices

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Contains the functions for the teacher algorithm.
+Contains the main functions for different strategies. 
 Date: 6/3/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
@@ -10,11 +10,13 @@ Mail: roesler.mathias@cmi-figure.fr
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
-from numpy.random import default_rng 
+from data_fct import prep_data
+from custom_fct import *
 from selection_fct import *
 from init_fct import *
-from custom_fct import *
+
+
+### MACHINE TEACHING ###
 
 
 def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size=32, epochs=10):
@@ -52,11 +54,15 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
     thresholds = rng.exponential(1/lam_coef, size=(nb_examples)) # Threshold for each example
     accuracy = np.array([0], dtype=np.intc) # List of accuracy at each iteration, starts with 0
     teaching_set_len = np.array([0], dtype=np.intc) # List of number of examples at each iteration, starts with 0
-    model = student_model(train_data[0].shape) # Declare student model
+    model = model_init(train_data[0].shape) # Declare student model
 
-    positive_index, negative_index = rndm_init(train_labels) # Find index of intial examples
+    # Recuperate initial examples
+    init_indices = rndm_init(train_labels)
+    teaching_data = tf.gather(train_data, init_indices)
+    teaching_labels = tf.gather(train_labels, init_indices)
 
-    model, teaching_data, teaching_labels = teacher_initialization(model, train_data, train_labels, positive_index, negative_index, batch_size=batch_size, epochs=epochs)
+    # Initialize the model
+    model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs)
 
     while len(teaching_data) != nb_examples and len(teaching_data) < set_limit:
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
@@ -97,38 +103,39 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
     return teaching_data, teaching_labels, teaching_set_len
 
 
-def train_student_model(train_data, train_labels, test_data, test_labels, batch_size=32, epochs=10):
-    """ Trains a student model fitted with the train set and
-    tested with the test set. 
-    Input:  train_data -> tf.tensor[float32], list
-                of examples. 
+### CURRICULUM ###
+
+
+def two_step_curriculum(data, labels):
+    """ Creates a curriculum dividing the data into easy and
+    hard examples taking into account the classes.
+    Input:  data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            train_labels -> tf.tensor[int], list of labels associated
-                with the train data.
+            labels -> np.array[int], list of labels associated
+                with the data.
                 First dimension, number of examples.
-                Second dimension, one hot label.
-            test_data -> tf.tensor[float32], list
-                of examples.
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            test_labels -> tf.tensor[float32], list of labels associated
-                with the test data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
-            batch_size -> int, number of examples used in a batch for the neural
-                network.
-            epochs -> int, number of epochs for the training of the neural network.
-    Output: accuracies -> np.array[float32], accuracies for the training and the test. 
+                Second dimension, label.
+    Output: easy_indices -> np.array[int], list indices associated
+                with the easy examples of the data.
+            hard_indices -> np.array[int], list of hard indices associatied
+                with the hard examples of the data.
     """
 
-    model = student_model(train_data[0].shape) # Declare student model
+    max_class_nb = np.max(labels) # Highest class number
+    easy_indices = np.array([], dtype=np.intc)
+    hard_indices = np.array([], dtype=np.intc)
     
-    print("\nSet length", len(train_data))
+    classes = np.random.choice(range(max_class_nb+1), max_class_nb+1, replace=False)
+    averages = average_examples(data, labels)  # List of average example for each class
+    examples = find_examples(data, labels)     # List of examples for each class
+    
+    for i in classes:
+        dist = tf.norm(averages[i]-examples[i], axis=(1, 2)) # Estimate distance to average
+        dist = dist/np.max(dist)    # Normalize distances
 
-    hist = model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
-    test_score = model.evaluate(test_data, test_labels, batch_size=batch_size)
-
-    return np.array(np.append(hist.history.get('accuracy'), [test_score[1]]), dtype=np.float32)
+        easy_indices = np.concatenate([easy_indices, np.where(dist <= np.mean(dist))[0]], axis=0)
+        hard_indices = np.concatenate([hard_indices, np.where(dist > np.mean(dist))[0]], axis=0)
+        
+    return easy_indices, hard_indices
