@@ -77,8 +77,13 @@ def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positi
     missed_data = tf.gather(train_data, missed_indices, axis=0)
     missed_labels = tf.gather(train_labels, missed_indices, axis=0)
 
-    positive_indices, negative_indices = find_indices(missed_labels)
-    positive_examples, negative_examples = find_examples(missed_data, missed_labels)
+    indices = find_indices(missed_labels)
+    negative_indices = indices[0]
+    positive_indices = indices[1]
+
+    examples = find_examples(missed_data, missed_labels)
+    negative_examples = examples[0]
+    positive_examples = examples[1]
 
     if max_nb//2 < positive_indices.shape[0]:
         positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
@@ -101,58 +106,3 @@ def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positi
             added_indices = np.concatenate((positive_indices, np.squeeze(negative_indices)), axis=0)
 
     return added_indices
-
-
-def select_curriculum_examples(max_nb, train_data, train_labels, ite, overlap=0):
-    """ Selects the max_nb//2 positive and max_nb//2 negative examples  
-    Input:  max_nb -> int, maximal number of examples to add.
-            train_data -> tf.tensor[float32], list of examples. 
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            train_labels -> tf.tensor[int], list of labels associated
-                with the train data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
-            ite -> int, 
-            overlap -> int, number of examples to reuse.
-    Output: added_indices -> np.array[int], list of indices of examples to be 
-                added to the teaching set.
-    """
-
-    if overlap >= max_nb:
-        # Check for inconsitency
-        print("Error in function select_curriculum_examples: overlap is greater than number of selected examples.")
-        return None
-
-    positive_indices, negative_indices = find_indices(train_labels)
-    positive_examples, negative_examples = find_examples(train_data, train_labels)  # Find positive and negative examples
-    positive_average, negative_average = average_examples(train_data, train_labels) # Estimate the positive and negative average
-
-    positive_dist = tf.squeeze(tf.norm(positive_examples-positive_average, axis=(1, 2)))
-    negative_dist = tf.squeeze(tf.norm(negative_examples-negative_average, axis=(1, 2)))
-
-    positive_sorted_indices = np.argsort(positive_dist, kind='heapsort')
-    negative_sorted_indices = np.argsort(negative_dist, kind='heapsort')
-
-    index_block = range((ite*max_nb//2)-overlap, ((ite+1)*max_nb//2)-overlap) # Block of indices to select examples from
-
-    if index_block[0] < 0:
-        # If the first index is negative shift all indices
-        index_block = index_block + index_block[0]
-
-    if index_block[-1] > len(positive_sorted_indices):
-        # If the number of desired positive examples is to great
-        selected_positive_indices = positive_sorted_indices[index_block[0]:]
-
-    else:
-        selected_positive_indices = positive_sorted_indices[index_block]
-
-    if index_block[-1] > len(negative_sorted_indices):
-        # If the number of desired negative examples is to great
-        selected_negative_indices = negative_sorted_indices[index_block[0]:]
-
-    else:
-        selected_negative_indices = negative_sorted_indices[index_block]
-
-    return np.concatenate((positive_indices[selected_positive_indices], negative_indices[selected_negative_indices]))

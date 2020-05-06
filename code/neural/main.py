@@ -45,7 +45,7 @@ def main(data_name):
         # Train model with curriculum
         print("\nCurriculum training")
         tic = process_time()
-        cur_accuracies += class_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs//10)
+        cur_accuracies += class_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs)
         toc = process_time()
 
         # Add curriculum time
@@ -54,16 +54,10 @@ def main(data_name):
         # Prepare train data labels
         train_labels = prep_data(train_labels, class_nb)
 
-        """
-        # Train model with curriculum
-        print("\nCurriculum training")
-        cur_accuracies += continuous_training(train_data, train_labels, test_data, test_labels, 3, epochs=epochs//3)
-        """
-        
         # Find optimal set
         print("\nGenerating optimal set")
         tic = process_time()
-        optimal_data, optimal_labels, example_nb, missed_len = create_teacher_set(train_data, train_labels, np.log(N/delta), set_limit, epochs=epochs//3) 
+        optimal_data, optimal_labels, example_nb, missed_len = create_teacher_set(train_data, train_labels, np.log(N/delta), set_limit, epochs=3) 
 
         # Train model with teaching set
         print("\nMachine teaching training")

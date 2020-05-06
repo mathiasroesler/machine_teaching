@@ -115,31 +115,3 @@ def rndm_init(labels):
     negative_index = rng.choice(negative_indices)
 
     return positive_index, negative_index
-
-
-def min_avg_init(data, labels, positive_average, negative_average):
-    """ Selects the index of the positive example closest to the negative average and the 
-    index of the negative example closest to the positive average.
-    Input:  data -> tf.tensor[float32], list of examples.
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            labels -> tf.tensor[int], list of labels associated
-                with the data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
-                First dimension number of examples.
-                Second dimension features.
-            positive_average -> tf.tensor[float32], average positive example.
-            negative_average -> tf.tensor[float32], average negative example.
-    Output: positive_index -> int, selected positive example index.
-            negative_index -> int, selected negative example index.
-    """
-
-    positive_indices, negative_indices = find_indices(labels)
-    positive_examples, negative_examples = find_examples(data, labels)
-
-    positive_dist = tf.norm(positive_examples-negative_average, axis=(1, 2))
-    negative_dist = tf.norm(negative_examples-positive_average, axis=(1, 2))
-
-    return positive_indices[np.argmin(positive_dist)], negative_indices[np.argmin(negative_dist)]

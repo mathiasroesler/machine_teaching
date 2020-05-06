@@ -10,6 +10,7 @@ Mail: roesler.mathias@cmi-figure.fr
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from numpy.random import default_rng 
 from selection_fct import *
 from init_fct import *
@@ -79,7 +80,6 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
         #added_indices = select_rndm_examples(missed_indices, 200)
         added_indices = select_examples(missed_indices, thresholds, weights)
         #added_indices = select_min_avg_dist(missed_indices, 200, train_data, train_labels, positive_average, negative_average)
-        #added_indices = select_curriculum_examples(200, train_data, train_labels, ite-1)
 
         # Update the teacher set and add length to list
         teaching_data, teaching_labels = update_teaching_set(teaching_data, teaching_labels, train_data, train_labels, added_indices)

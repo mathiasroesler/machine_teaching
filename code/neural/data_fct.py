@@ -80,8 +80,13 @@ def prep_data(labels, class_nb):
         assert(max(labels) > class_nb)
 
     except AssertionError:
-        print("Error in function prep_data: class_nb must be a positive integer less then the number of classes.")
-        exit(1)
+        if max(labels) == 1:
+            # If there are only two classes already
+            return tf.one_hot(labels, 2)
+
+        else:
+            print("Error in function prep_data: class_nb must be a positive integer less then the number of classes.")
+            exit(1)
 
     # Labels for the data
     positive_indices = np.nonzero(labels == class_nb)[0]
