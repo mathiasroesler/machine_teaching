@@ -3,7 +3,7 @@
 
 """
 Contains the functions for the initialization of the teacher.
-Date: 6/3/2020
+Date: 7/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -15,11 +15,20 @@ from numpy.random import default_rng
 from custom_fct import *
 
 
-def model_init(data_shape):
+def model_init(data_shape, max_class_nb):
     """ Initializes the model.
     Input:  data_shape -> tuple[int], shape of the input data. 
+            max_class_nb -> int, number of classes.
     Output: model -> CNN model
     """
+
+    try:
+        assert(np.issubdtype(type(max_class_nb), np.integer))
+        assert(max_class_nb > 1)
+
+    except AssertionError:
+        print("Error in function model_init: max_class_nb must be an integer greater or equal to 2.")
+        exit(1)
 
     model = tf.keras.models.Sequential() # Sequential neural network
 
@@ -35,7 +44,7 @@ def model_init(data_shape):
     model.add(Flatten(data_format='channels_last'))
     model.add(Dense(120, activation='relu'))
     model.add(Dense(84, activation='relu'))
-    model.add(Dense(2, activation='softmax'))
+    model.add(Dense(max_class_nb, activation='softmax'))
 
     # Compile model
     model.compile(loss='categorical_crossentropy',

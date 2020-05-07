@@ -24,6 +24,7 @@ def find_indices(labels):
     """
 
     if tf.is_tensor(labels):
+        # If labels are one hot
         labels = np.argmax(labels, axis=1)
 
     nb_classes = np.max(labels)+1
@@ -54,6 +55,10 @@ def find_examples(data, labels):
                 Fourth dimension, color channel. 
     """
 
+    if tf.is_tensor(labels):
+        # If labels are one hot
+        labels = np.argmax(labels, axis=1)
+
     indices = find_indices(labels)
     nb_classes = np.max(labels)+1
     examples = [None]*nb_classes
@@ -63,6 +68,23 @@ def find_examples(data, labels):
         examples[i] = tf.gather(data, indices[i], axis=0)
 
     return examples
+
+
+def find_class_nb(labels):
+    """ Finds the highest class number. The first class must be 0.
+    Input:  labels -> tf.tensor[int] | np.array[int], list of labels associated
+                with the data.
+                First dimension, number of examples.
+                Second dimension, one hot label | label.
+    Output: class_nb -> int, number of class number.
+    """
+
+    if tf.is_tensor(labels):
+        # If labels are one hot
+        return np.max(np.argmax(labels, axis=1))+1
+
+    else:
+        return np.max(labels)+1
 
 
 def average_examples(data, labels):
@@ -83,6 +105,7 @@ def average_examples(data, labels):
     """
 
     if tf.is_tensor(labels):
+        # If labels are one hot
         labels = np.argmax(labels, axis=1)
 
     nb_classes = np.max(labels)+1

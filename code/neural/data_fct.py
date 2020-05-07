@@ -69,7 +69,7 @@ def prep_data(labels, class_nb=0, multiclass=False):
     Input:  labels -> np.array[int], list of labels associated
                 with the train data.
             class_nb -> int, desired class to be classified vs the others.
-            mutliclass -> bool, True if there are more than 2 classes.
+            multiclass -> bool, True if there are more than 2 classes.
     Output: labels -> tf.tensor[int], list of labels associated
                 with the train data.
                 First dimension, number of examples.
