@@ -66,10 +66,12 @@ def prep_data(labels, class_nb=0, multiclass=False):
     If mutliclass is False, changes the labels that are not 
     equal to class_nb to 0 and the others to 1 and returns one hot labels.
     Otherwise, returns the one hot labels. The first class must be 0.
-    Input:  labels -> np.array[int], list of labels associated
+    Input:  labels -> np.array[int] | tf.tensor[int], list of labels associated
                 with the train data.
+                First dimension, number of examples.
+                Second dimension, label | one hot label.
             class_nb -> int, desired class to be classified vs the others.
-            multiclass -> bool, True if there are more than 2 classes.
+            multiclass -> bool, True if more than 2 classes.
     Output: labels -> tf.tensor[int], list of labels associated
                 with the train data.
                 First dimension, number of examples.
