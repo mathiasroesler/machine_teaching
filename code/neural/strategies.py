@@ -3,7 +3,7 @@
 
 """
 Contains the main functions for different strategies. 
-Date: 6/3/2020
+Date: 7/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -16,7 +16,7 @@ from selection_fct import *
 from init_fct import *
 
 
-def classic_training(train_data, train_labels, test_data, test_labels, batch_size=32, epochs=10):
+def classic_training(train_data, train_labels, test_data, test_labels, class_nb=0,  batch_size=32, epochs=10, multiclass=False):
     """ Trains a student model fitted with the train set and
     tested with the test set. 
     Input:  train_data -> tf.tensor[float32], list
@@ -37,13 +37,20 @@ def classic_training(train_data, train_labels, test_data, test_labels, batch_siz
                 with the test data.
                 First dimension, number of examples.
                 Second dimension, one hot label.
+            class_nb -> int, class selected for the one vs all.
             batch_size -> int, number of examples used in a batch for the neural
                 network.
             epochs -> int, number of epochs for the training of the neural network.
+            multiclass -> bool, True if more than 2 classes.
     Output: accuracies -> np.array[float32], accuracies for the training and the test. 
     """
+ 
+    # Get number of classes
+    max_class_nb = find_class_nb(train_labels, multiclass)
 
-    model = model_init(train_data[0].shape) # Declare student model
+    # Convert labels to one hot and declare model
+    train_labels = prep_data(train_labels, class_nb, multiclass)
+    model = model_init(train_data[0].shape, max_class_nb)
     
     hist = model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
     test_score = model.evaluate(test_data, test_labels, batch_size=batch_size)
@@ -54,7 +61,7 @@ def classic_training(train_data, train_labels, test_data, test_labels, batch_siz
 ### MACHINE TEACHING ###
 
 
-def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size=32, epochs=10):
+def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0, batch_size=32, epochs=10, multiclass=False):
     """ Produces the optimal teaching set given the train_data and
     a lambda coefficiant. If the teacher cannot converge in 
     ite_max_nb then it returns None.
@@ -62,14 +69,19 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            train_labels -> tf.tensor[int], list of labels associated
+            train_labels -> np.array[int] | tf.tensor[int], list of labels associated
                 with the train data.
                 First dimension, number of examples.
-                Second dimension, one hot label.
+                Second dimension, label | one hot label.
             lam_coef -> int, coefficiant for the exponential distribution
                 for the thresholds.
             set_limit -> int, maximum number of examples to be put in the 
                 teaching set.
+            class_nb -> int, class selected for the one vs all.
+            batch_size -> int, number of examples used in a batch for the neural
+                network.
+            epochs -> int, number of epochs for the training of the neural network.
+            multiclass -> bool, True if more than 2 classes.
     Output: teaching_data -> np.array[np.array[int]], list of examples.
                 First dimension number of examples.
                 Second dimension features.
@@ -80,6 +92,7 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
     """
 
     rng = default_rng() # Set seed 
+    max_class_nb = find_class_nb(train_labels, multiclass) # Get number of classes
 
     # Variables
     ite = 1
@@ -89,10 +102,16 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
     thresholds = rng.exponential(1/lam_coef, size=(nb_examples)) # Threshold for each example
     accuracy = np.array([0], dtype=np.intc) # List of accuracy at each iteration, starts with 0
     teaching_set_len = np.array([0], dtype=np.intc) # List of number of examples at each iteration, starts with 0
-    model = model_init(train_data[0].shape) # Declare student model
 
-    # Recuperate initial examples
-    init_indices = rndm_init(train_labels)
+    # Initial example indices
+    #init_indices = rndm_init(train_labels)
+    init_indices = nearest_avg_init(train_data, train_labels)
+
+    # Create model and convert labels to one hot
+    train_labels = prep_data(train_labels, class_nb, multiclass)
+    model = model_init(train_data[0].shape, max_class_nb)
+
+    # Initialize teaching data and labels
     teaching_data = tf.gather(train_data, init_indices)
     teaching_labels = tf.gather(train_labels, init_indices)
 
@@ -112,6 +131,7 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, batch_size
             # All examples are placed correctly
             break
 
+        # Find indices of examples to add
         #added_indices = select_rndm_examples(missed_indices, 200)
         added_indices = select_examples(missed_indices, thresholds, weights)
         #added_indices = select_min_avg_dist(missed_indices, 200, train_data, train_labels, positive_average, negative_average)
@@ -148,27 +168,28 @@ def two_step_curriculum(data, labels):
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            labels -> np.array[int], list of labels associated
-                with the data.
+            labels -> tf.tensor[int] np.array[int], list of labels 
+                associated with the data.
                 First dimension, number of examples.
-                Second dimension, label.
+                Second dimension, one hot label | label.
     Output: easy_indices -> np.array[int], list indices associated
                 with the easy examples of the data.
             hard_indices -> np.array[int], list of hard indices associatied
                 with the hard examples of the data.
     """
 
-    max_class_nb = np.max(labels) # Highest class number
+    # Get number of classes
+    max_class_nb = find_class_nb(labels)
+
     easy_indices = np.array([], dtype=np.intc)
     hard_indices = np.array([], dtype=np.intc)
     
-    classes = np.random.choice(range(max_class_nb+1), max_class_nb+1, replace=False)
+    classes = np.random.choice(range(max_class_nb), max_class_nb, replace=False)
     averages = average_examples(data, labels)  # List of average example for each class
     examples = find_examples(data, labels)     # List of examples for each class
-    
+
     for i in classes:
         dist = tf.norm(averages[i]-examples[i], axis=(1, 2)) # Estimate distance to average
-        dist = dist/np.max(dist)    # Normalize distances
 
         easy_indices = np.concatenate([easy_indices, np.where(dist <= np.mean(dist))[0]], axis=0)
         hard_indices = np.concatenate([hard_indices, np.where(dist > np.mean(dist))[0]], axis=0)
@@ -176,7 +197,7 @@ def two_step_curriculum(data, labels):
     return easy_indices, hard_indices
 
 
-def curriculum_training(train_data, train_labels, test_data, test_labels, class_nb, batch_size=32, epochs=10):
+def curriculum_training(train_data, train_labels, test_data, test_labels, class_nb=0, batch_size=32, epochs=10, multiclass=False):
     """ Trains the model using a two step curriculum. 
     Input:  train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
@@ -198,27 +219,29 @@ def curriculum_training(train_data, train_labels, test_data, test_labels, class_
             batch_size -> int, number of examples used in a batch for the neural
                 network.
             epochs -> int, number of epochs for the training of the neural network.
+            multiclass -> bool, True if more than 2 classes.
     Output: accuracies -> np.array[float], accuracy at each epoch of training and
                 for the test set.
     """
 
-    max_class_nb = np.max(train_labels) # Highest class number
+    # Get number of classes
+    max_class_nb = find_class_nb(train_labels, multiclass)
 
     try:
-        assert(isinstance(class_nb, int))
+        assert(np.issubdtype(type(class_nb), np.integer))
         assert(class_nb >= 0)
-        assert(max_class_nb >= class_nb)
 
     except AssertionError:
-        print("Error in function class_training: class_nb must be an integer smaller than the number of classes.")
+        print("Error in function curriculum_training: class_nb must be an integer smaller than the number of classes.")
         exit(1)
 
-    model = model_init(train_data[0].shape) # Student model to train
+
+    model = model_init(train_data[0].shape, max_class_nb) # Student model to train
     acc_hist = np.array([], dtype=np.float32)  # List for the accuracies
     easy_indices, hard_indices = two_step_curriculum(train_data, train_labels)
 
     # Convert train labels to one hot labels
-    train_labels = prep_data(train_labels, class_nb)
+    train_labels = prep_data(train_labels, class_nb, multiclass)
 
     # Train model with easy then hard examples
     hist = model.fit(tf.gather(train_data, easy_indices), tf.gather(train_labels, easy_indices), batch_size=batch_size, epochs=epochs//2)
@@ -230,3 +253,34 @@ def curriculum_training(train_data, train_labels, test_data, test_labels, class_
     accuracy = model.evaluate(test_data, test_labels, batch_size=batch_size)
 
     return np.concatenate((acc_hist, [accuracy[1]]), axis=0)
+
+
+### SELF-PACED CURRICULUM ###
+
+
+def spc_training(train_data, train_labels, test_data, test_labels, batch_size=32, epochs=10):
+    """ 
+    Input:  train_data -> tf.tensor[float32], list of examples. 
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+            train_labels -> np.array[int], list of labels associated
+                with the train data.
+                First dimension, number of examples.
+                Second dimension, label.
+            test_data -> tf.tensor[float32], list of examples.
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+            test_labels -> tf.tensor[int], list of labels associated
+                with the test data.
+                First dimension, number of examples.
+                Second dimension, one hot label.
+            batch_size -> int, number of examples used in a batch for the neural
+                network.
+            epochs -> int, number of epochs for the training of the neural network.
+    Output: accuracies -> np.array[float], accuracy at each epoch of training and
+                for the test set.
+    """
+
+    init_indices = nearest_avg_init(train_data, train_labels)

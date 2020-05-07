@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Contains the function to read and edit the mnist data.
-Date: 6/3/2020
+Contains the functions to manipulate the data.
+Date: 7/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -76,28 +76,31 @@ def prep_data(labels, class_nb=0, multiclass=False):
                 Second dimension, one hot label.
     """
 
+    if tf.is_tensor(labels):
+        # If the data is already one hot
+        return labels
+        
     if multiclass:
-        return tf.one_hot(labels, max(labels)+1)
+        # If there are more then two classes
+        return tf.one_hot(labels, np.max(labels)+1)
     
     try:
         assert(isinstance(class_nb, int))
         assert(class_nb >= 0)
-        assert(max(labels) > class_nb)
+        assert(np.max(labels) > class_nb)
 
     except AssertionError:
-        if max(labels) == 1:
-            # If there are only two classes already
-            return tf.one_hot(labels, 2)
+        print("Error in function prep_data: class_nb must be a positive integer less then the number of classes.")
+        exit(1)
 
-        else:
-            print("Error in function prep_data: class_nb must be a positive integer less then the number of classes.")
-            exit(1)
+    # Convert to two labels to two classes given the class number
+    one_hot_labels = np.zeros(labels.shape, dtype=np.intc)
 
     # Labels for the data
     positive_indices = np.nonzero(labels == class_nb)[0]
     negative_indices = np.nonzero(labels != class_nb)[0]
 
-    labels[positive_indices] = 1
-    labels[negative_indices] = 0
+    one_hot_labels[positive_indices] = 1
+    one_hot_labels[negative_indices] = 0
 
-    return tf.one_hot(labels, 2)
+    return tf.one_hot(one_hot_labels, 2)
