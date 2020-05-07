@@ -10,7 +10,6 @@ Mail: roesler.mathias@cmi-figure.fr
 
 from time import process_time
 from data_fct import *
-from training_fct import *
 from strategies import *
 from custom_fct import *
 from plot_fct import *
