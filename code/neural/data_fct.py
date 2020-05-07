@@ -61,18 +61,23 @@ def extract_data(data_name):
     return tf.cast(train_data[:20000], dtype=tf.float32), tf.cast(test_data[:4000], dtype=tf.float32), train_labels[:20000], test_labels[:4000]
 
 
-def prep_data(labels, class_nb):
+def prep_data(labels, class_nb=0, multiclass=False):
     """ Prepares the labels for a one vs all strategy.
-    Changes the labels that are not equal to class_nb to 0 and the
-    others to 1.
+    If mutliclass is False, changes the labels that are not 
+    equal to class_nb to 0 and the others to 1 and returns one hot labels.
+    Otherwise, returns the one hot labels. The first class must be 0.
     Input:  labels -> np.array[int], list of labels associated
                 with the train data.
             class_nb -> int, desired class to be classified vs the others.
+            mutliclass -> bool, True if there are more than 2 classes.
     Output: labels -> tf.tensor[int], list of labels associated
                 with the train data.
                 First dimension, number of examples.
                 Second dimension, one hot label.
     """
+
+    if multiclass:
+        return tf.one_hot(labels, max(labels)+1)
     
     try:
         assert(isinstance(class_nb, int))
