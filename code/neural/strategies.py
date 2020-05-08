@@ -104,8 +104,8 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0
     teaching_set_len = np.array([0], dtype=np.intc) # List of number of examples at each iteration, starts with 0
 
     # Initial example indices
-    #init_indices = rndm_init(train_labels)
-    init_indices = nearest_avg_init(train_data, train_labels)
+    init_indices = rndm_init(train_labels)
+    #init_indices = nearest_avg_init(train_data, train_labels)
 
     # Create model and convert labels to one hot
     train_labels = prep_data(train_labels, class_nb, multiclass)
@@ -141,7 +141,8 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0
         teaching_labels = tf.concat([teaching_labels, tf.gather(train_labels, added_indices)], axis=0)
         teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
     
-        # Update model
+        # Reset model and update it
+        model = model_init(train_data[0].shape, max_class_nb)
         hist = model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs) 
         new_acc = np.sum(hist.history.get('accuracy'))/epochs
 

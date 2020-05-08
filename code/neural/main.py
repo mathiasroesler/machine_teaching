@@ -28,7 +28,7 @@ def main(data_name):
     set_limit = 1000
     epochs = 4 
     class_nb = 3
-    multiclass = True
+    multiclass = False
     iteration_nb = 1
     mt_accuracies = np.zeros(epochs+1, dtype=np.float32)   # List containing the accuracies for machine teaching
     cur_accuracies = np.zeros(epochs+1, dtype=np.float32)  # List containing the accuracies for curriculum learning
