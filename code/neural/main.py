@@ -37,7 +37,7 @@ def main(data_name):
 
     # Other variables
     class_nb = 3
-    multiclass = False
+    multiclass = True 
     iteration_nb = 1
     loop_ite = 1
 

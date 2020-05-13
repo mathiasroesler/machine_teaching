@@ -149,7 +149,7 @@ def display(acc_list, display_labels, times):
     else:
         max_label_len = len("strategy")
 
-    print("Strategy".ljust(max_label_len, " "), "| Test accuracies | Times")
+    print("\nStrategy".ljust(max_label_len, " "), "| Test accuracies | Times")
 
     for i in range(len(acc_list)):
         label_str = display_labels[i].ljust(max_label_len, " ") + " |" 

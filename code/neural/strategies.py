@@ -277,7 +277,7 @@ def curriculum_training(train_data, train_labels, test_data, test_labels, class_
 ### SELF-PACED CURRICULUM ###
 
 
-def create_spc_set(train_data, train_labels, loop_ite=3, class_nb=0,  batch_size=32, epochs=10, multiclass=False):
+def create_spc_set(train_data, train_labels, loop_ite=1, class_nb=0,  batch_size=32, epochs=10, multiclass=False):
     """ Creates the data set for self-paced curriculum learning.
     Input:  train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
