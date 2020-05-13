@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching using SVM.
-Date: 6/3/2020
+Date: 13/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -79,7 +79,7 @@ print("Select cifar or mnist:")
 data_name = input().rstrip()
 
 while data_name != "cifar" and data_name != "mnist":
-    print("Select cifar or mnsit:")
+    print("Select cifar or mnist:")
     data_name = input().rstrip()
 
 main(data_name)
