@@ -142,8 +142,8 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
 
         # Find all the missed examples indices
-        missed_indices = np.where(tf.norm(model.predict(train_data)-train_labels, axis=1) == 0)[0]
-    
+        missed_indices = np.where(tf.norm(np.round(model.predict(train_data), 1)-train_labels, axis=1) != 0)[0]
+
         if missed_indices.size == 0:
             # All examples are placed correctly
             break
@@ -346,23 +346,28 @@ def create_spc_set(train_data, train_labels, loop_ite=1, class_nb=0,  batch_size
 
     while ite != loop_ite:
         # Find indices to add
-        easy_added_indices = np.where(tf.norm(model.predict(easy_data)-easy_labels, axis=1) == 0)[0]
+        easy_added_indices = np.where(tf.norm(np.round(model.predict(easy_data), 1)-easy_labels, axis=1) == 0)[0]
         easy_added_data = tf.gather(easy_data, easy_added_indices)
         easy_added_labels = tf.gather(easy_labels, easy_added_indices)
 
-        hard_added_indices = np.where(tf.norm(model.predict(hard_data)-hard_labels, axis=1) == 0)[0]
+        hard_added_indices = np.where(tf.norm(np.round(model.predict(hard_data), 1)-hard_labels, axis=1) == 0)[0]
         hard_added_data = tf.gather(hard_data, hard_added_indices)
         hard_added_labels = tf.gather(hard_labels, hard_added_indices)
 
         added_data = tf.concat([easy_added_data, hard_added_data], axis=0)
         added_labels = tf.concat([easy_added_labels, hard_added_labels], axis=0) 
 
-        # Update the data and labels
-        data = tf.concat([data, added_data], axis=0)
-        labels = tf.concat([labels, added_labels], axis=0)
+        if len(added_data) == 0:
+            # If no examples where found
+            ite-=1
 
-        # Update model
-        model.fit(added_data, added_labels, batch_size=batch_size, epochs=epochs)
+        else:
+            # Update the data and labels
+            data = tf.concat([data, added_data], axis=0)
+            labels = tf.concat([labels, added_labels], axis=0)
+
+            # Update model
+            model.fit(added_data, added_labels, batch_size=batch_size, epochs=epochs)
 
         # Remove used data and labels
         easy_data = tf.convert_to_tensor(np.delete(easy_data, easy_added_indices, axis=0))
