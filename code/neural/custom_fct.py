@@ -121,3 +121,38 @@ def average_examples(data, labels):
         averages[i] = np.mean(examples[i], axis=0) 
 
     return tf.stack(averages)
+
+
+def display(acc_list, display_labels, times):
+    """ Displays the test accuracies and the times.
+    Input:  acc_list -> list[np.array[float32]], list of accuracies for
+                each strategy. The last element of each accuracy list must
+                be the test accuracy.
+            display_labels -> list[str], list of labels associated with each
+                strategy.
+            times -> np.array[float32], list of times associated with each
+                strategy.
+    Output:
+    """
+
+    try:
+        assert(len(acc_list) == len(display_labels) == len(times))
+
+    except:
+        print("Error in function display: the inputs must all have the same dimension.")
+        exit(1)
+
+    # Get longest label for justification
+    if len(max(display_labels, key=len)) > len("strategy"):
+        max_label_len = len(max(display_labels, key=len))
+
+    else:
+        max_label_len = len("strategy")
+
+    print("Strategy".ljust(max_label_len, " "), "| Test accuracies | Times")
+
+    for i in range(len(acc_list)):
+        label_str = display_labels[i].ljust(max_label_len, " ") + " |" 
+        acc_str = str(acc_list[i][-1])[:4].ljust(len("test accuracies"), " ") + " |"
+        
+        print(label_str, acc_str, "%.2f" % times[i], "s")

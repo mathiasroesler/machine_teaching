@@ -156,24 +156,30 @@ def plot_example_dist(data, labels):
     plt.show()
 
 
-def plot_comp(full_acc, cur_acc, mt_acc):
+def plot_comp(acc_list, plot_types, plot_labels):
     """ Plot the comparaison between curriculum learning and machine
     teaching accuracies.
-    Input:  full_acc -> np.array[float], accuracy for the fully trained model.
-            cur_acc -> np.array[float], accuracy for the curriculum learning at
-            each iteration.
-            mt_acc -> np.array[float], accuracy for the machine teaching at each
-            iteration.
+    Input:  acc_list -> list[np.array[float32]], list of accuracies for
+                each strategy. The last element of each accuracy list must
+                be the test accuracy.
+            plot_types -> list[str], list of plot color and type for each
+                strategy.
+            plot_labels -> list[str], list of labels associated with each
+                strategy.
     Output:
     """
 
-    assert(len(cur_acc) == len(mt_acc) == len(full_acc))
+    try:
+        assert(len(acc_list) == len(plot_types) == len(plot_labels))
 
-    max_ite = len(full_acc)
+    except:
+        print("Error in function plot_comp: the inputs must all have the same dimension.")
+        exit(1)
 
-    plt.plot(range(max_ite), full_acc, 'ro-', label="Fully trained model") 
-    plt.plot(range(max_ite), mt_acc, 'bo-', label="Machine teaching model") 
-    plt.plot(range(max_ite), cur_acc, 'go-', label="Curriculum learning model")
+    strategy_nb = len(acc_list)
+
+    for i in range(strategy_nb):
+        plt.plot(range(len(acc_list[i])-1), acc_list[i][:-1], plot_types[i], label=plot_labels[i])
 
     plt.xlabel("Iteration number")
     plt.ylabel("Accuracy")

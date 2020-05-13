@@ -22,19 +22,32 @@ def main(data_name):
             to use.
     """
 
-    # Variables
+    # Variables for machine teaching
     delta = 0.1
     N = 10000
     set_limit = 200
+
+    # Variables for neural networks
     epochs = 2
+    batch_size = 32
+
+    # Variables for plotting
+    plot_types = ['ro-', 'bo-', 'go-', 'ko-']
+    plot_labels = ["MT", "Curriculum", "SPC", "Full"]
+
+    # Other variables
     class_nb = 3
     multiclass = False
     iteration_nb = 1
-    mt_accuracies = np.zeros(epochs+1, dtype=np.float32)   # List containing the accuracies for machine teaching
-    cur_accuracies = np.zeros(epochs+1, dtype=np.float32)  # List containing the accuracies for curriculum learning
-    full_accuracies = np.zeros(epochs+1, dtype=np.float32) # List containing the accuracies for fully trained model 
-    spc_accuracies = np.zeros(epochs+1, dtype=np.float32)  # List containing the accuracies for self-paced curriculum learning
-    times = np.zeros(4, dtype=np.float32)                  # List containing the time of each method
+    loop_ite = 1
+
+    # Accuracy lists
+    mt_accuracies = np.zeros(epochs+1, dtype=np.float32)   # Machine teaching
+    cur_accuracies = np.zeros(epochs+1, dtype=np.float32)  # Curriculum
+    full_accuracies = np.zeros(epochs+1, dtype=np.float32) # Full
+    spc_accuracies = np.zeros(epochs+1, dtype=np.float32)  # Self-paced curriculum
+    times = np.zeros(len(plot_types), dtype=np.float32)     # List containing the time of each method
+    acc_list = [mt_accuracies, cur_accuracies, spc_accuracies, full_accuracies]
 
     for i in range(iteration_nb):
         # Extract data from files
@@ -43,27 +56,7 @@ def main(data_name):
         # Prepare test data labels
         test_labels = prep_data(test_labels, class_nb, multiclass)
 
-        # Train model with SPC
-        print("\nGenerating SPC set")
-        tic = process_time()
-        spc_data, spc_labels = create_spc_set(train_data, train_labels, class_nb, epochs=1, multiclass=multiclass)
-
-        print("\nSelf-paced curriculum training")
-        spc_accuracies += classic_training(spc_data, spc_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass, shuffle=False)
-        toc = process_time()
-        
-        # Add SPC time
-        times[0] += toc-tic
-
-        # Train model with curriculum
-        print("\nCurriculum training")
-        tic = process_time()
-        cur_accuracies += curriculum_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
-        toc = process_time()
-
-        # Add curriculum time
-        times[1] += toc-tic
-
+        ### MT TRAIN ###
         # Find optimal set
         print("\nGenerating optimal set")
         tic = process_time()
@@ -71,17 +64,43 @@ def main(data_name):
 
         # Train model with teaching set
         print("\nMachine teaching training")
-        mt_accuracies += classic_training(optimal_data, optimal_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
+        acc_list[0] += classic_training(optimal_data, optimal_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
         toc = process_time()
 
         # Add machine teaching time
+        times[0] += toc-tic
+
+
+        ### CURRICULUM TRAIN ###
+        # Train model with curriculum
+        print("\nCurriculum training")
+        tic = process_time()
+        acc_list[1] += curriculum_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
+        toc = process_time()
+
+        # Add curriculum time
+        times[1] += toc-tic
+
+
+        ### SPC TRAIN ###
+        # Train model with SPC
+        print("\nGenerating SPC set")
+        tic = process_time()
+        spc_data, spc_labels = create_spc_set(train_data, train_labels, loop_ite, class_nb, epochs=1, multiclass=multiclass)
+
+        print("\nSelf-paced curriculum training")
+        acc_list[2] += classic_training(spc_data, spc_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass, shuffle=False)
+        toc = process_time()
+        
+        # Add SPC time
         times[2] += toc-tic
 
 
+        ### FULL TRAIN ###
         # Train model with the all the examples
         print("\nFull training")
         tic = process_time()
-        full_accuracies += classic_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
+        acc_list[3] += classic_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
         toc = process_time()
 
         # Add full training time
@@ -90,13 +109,12 @@ def main(data_name):
 
     # Average time and accuracies
     times = times/iteration_nb
-    cur_accuracies = cur_accuracies/iteration_nb
-    full_accuracies = full_accuracies/iteration_nb
-    mt_accuracies = mt_accuracies/iteration_nb
 
-    print("Test accuracies: curriculum ", cur_accuracies[-1], " machine teaching ", mt_accuracies[-1], " full ", full_accuracies[-1], " SPC ", spc_accuracies[-1])
-    print("Times : curriculum : %.2f" % times[0], "s machine teaching %.2f" % times[1], "s full %.2f" % times[2], "s")
-    plot_comp(full_accuracies[:-1], cur_accuracies[:-1], mt_accuracies[:-1])
+    for accuracies in acc_list:
+        accuracies = accuracies/iteration_nb
+
+    display(acc_list, plot_labels, times)
+    plot_comp(acc_list, plot_types, plot_labels)
 
 
 print("Select cifar or mnist:")
