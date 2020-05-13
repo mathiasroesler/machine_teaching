@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 7/5/2020
+Date: 13/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -23,12 +23,11 @@ def main(data_name):
     """
 
     # Variables for machine teaching
-    delta = 0.1
-    N = 10000
-    set_limit = 200
+    exp_rate = 100
+    set_limit = 10000 
 
     # Variables for neural networks
-    epochs = 2
+    epochs = 5
     batch_size = 32
 
     # Variables for plotting
@@ -60,17 +59,18 @@ def main(data_name):
         # Find optimal set
         print("\nGenerating optimal set")
         tic = process_time()
-        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, np.log(N/delta), set_limit, batch_size=2, epochs=1, multiclass=multiclass)
+        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, exp_rate, set_limit, batch_size=5, epochs=1, multiclass=multiclass)
 
         # Train model with teaching set
         print("\nMachine teaching training")
+        print("\nSet length: ", example_nb[-1])
         acc_list[0] += classic_training(optimal_data, optimal_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
         toc = process_time()
 
         # Add machine teaching time
         times[0] += toc-tic
 
-
+        """
         ### CURRICULUM TRAIN ###
         # Train model with curriculum
         print("\nCurriculum training")
@@ -95,10 +95,11 @@ def main(data_name):
         # Add SPC time
         times[2] += toc-tic
 
-
+        """
         ### FULL TRAIN ###
         # Train model with the all the examples
         print("\nFull training")
+        print("\nSet length: ", len(train_data))
         tic = process_time()
         acc_list[3] += classic_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
         toc = process_time()

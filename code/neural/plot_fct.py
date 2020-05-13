@@ -3,7 +3,7 @@
 
 """
 Plot functions for machine teaching.
-Date: 6/3/2020
+Date: 13/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """

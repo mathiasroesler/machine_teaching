@@ -3,7 +3,7 @@
 
 """
 Custom functions for machine teaching.
-Date: 6/3/2020
+Date: 13/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -152,7 +152,7 @@ def display(acc_list, display_labels, times):
     print("\nStrategy".ljust(max_label_len, " "), "| Test accuracies | Times")
 
     for i in range(len(acc_list)):
-        label_str = display_labels[i].ljust(max_label_len, " ") + " |" 
-        acc_str = str(acc_list[i][-1])[:4].ljust(len("test accuracies"), " ") + " |"
+        label_str = display_labels[i].ljust(max_label_len, " ") + "|" 
+        acc_str = str(acc_list[i][-1])[:4].ljust(len("test accuracies"), " ") + "|"
         
         print(label_str, acc_str, "%.2f" % times[i], "s")

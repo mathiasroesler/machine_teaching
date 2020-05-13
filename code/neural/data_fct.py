@@ -59,7 +59,7 @@ def extract_data(data_name):
     test_labels = np.squeeze(test[1])
 
     return tf.cast(train_data[:20000], dtype=tf.float32), tf.cast(test_data[:4000], dtype=tf.float32), train_labels[:20000], test_labels[:4000]
-
+    #return tf.cast(train_data, dtype=tf.float32), tf.cast(test_data, dtype=tf.float32), train_labels, test_labels
 
 def prep_data(labels, class_nb=0, multiclass=False):
     """ Prepares the labels for a one vs all strategy.
