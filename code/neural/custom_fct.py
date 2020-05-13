@@ -138,7 +138,7 @@ def display(acc_list, display_labels, times):
     try:
         assert(len(acc_list) == len(display_labels) == len(times))
 
-    except:
+    except AssertionError:
         print("Error in function display: the inputs must all have the same dimension.")
         exit(1)
 

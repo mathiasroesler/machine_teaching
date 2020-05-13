@@ -172,7 +172,7 @@ def plot_comp(acc_list, plot_types, plot_labels):
     try:
         assert(len(acc_list) == len(plot_types) == len(plot_labels))
 
-    except:
+    except AssertionError:
         print("Error in function plot_comp: the inputs must all have the same dimension.")
         exit(1)
 
