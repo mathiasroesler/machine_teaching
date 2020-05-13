@@ -3,7 +3,7 @@
 
 """
 Contains the main functions for different strategies. 
-Date: 7/5/2020
+Date: 13/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -70,7 +70,7 @@ def classic_training(train_data, train_labels, test_data, test_labels, class_nb=
 ### MACHINE TEACHING ###
 
 
-def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0, batch_size=32, epochs=10, multiclass=False):
+def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0, batch_size=32, epochs=10, multiclass=False):
     """ Produces the optimal teaching set given the train_data and
     a lambda coefficiant. If the teacher cannot converge in 
     ite_max_nb then it returns None.
@@ -82,7 +82,7 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0
                 with the train data.
                 First dimension, number of examples.
                 Second dimension, label | one hot label.
-            lam_coef -> int, coefficiant for the exponential distribution
+            exp_rate -> int, coefficiant for the exponential distribution
                 for the thresholds.
             set_limit -> int, maximum number of examples to be put in the 
                 teaching set.
@@ -115,13 +115,11 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0
 
     # Variables
     ite = 1
-    old_acc = 0
-    eps = 10e-3
     nb_examples = train_data.shape[0]
-    thresholds = rng.exponential(1/lam_coef, size=(nb_examples)) # Threshold for each example
-    weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
-    accuracy = np.array([0], dtype=np.intc) # List of accuracy at each iteration, starts with 0
+    accuracy = 0
+    thresholds = rng.exponential(1/exp_rate, size=(nb_examples)) # Threshold for each example
     teaching_set_len = np.array([0], dtype=np.intc) # List of number of examples at each iteration, starts with 0
+    added_indices = np.array([], dtype=np.intc) # List to keep track of indices of examples already added 
 
     # Initial example indices
     #init_indices = rndm_init(train_labels)
@@ -136,39 +134,42 @@ def create_teacher_set(train_data, train_labels, lam_coef, set_limit, class_nb=0
     teaching_labels = tf.gather(train_labels, init_indices)
 
     # Initialize the model
-    model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs)
+    hist = model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs)
+    accuracy = np.sum(hist.history.get('accuracy'))/epochs
 
-    while len(teaching_data) != nb_examples and len(teaching_data) < set_limit:
+    while len(teaching_data) != len(train_data) and len(teaching_data) < set_limit:
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
+
+        weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
 
         # Find all the missed examples indices
         missed_indices = np.where(tf.norm(np.round(model.predict(train_data), 1)-train_labels, axis=1) != 0)[0]
 
-        if missed_indices.size == 0:
-            # All examples are placed correctly
+        if missed_indices.size == 0 or accuracy > 0.90:
+            # All examples are placed correctly or sufficiently precise
             break
 
-        # Find indices of examples to add
-        #added_indices = select_rndm_examples(missed_indices, 200)
-        added_indices = select_examples(missed_indices, thresholds, weights)
-        #added_indices = select_min_avg_dist(missed_indices, 200, train_data, train_labels, positive_average, negative_average)
-        data = tf.gather(train_data, added_indices)
-        labels = tf.gather(train_labels, added_indices)
+        # Find indices of examples that could be added
+        new_indices = select_examples(missed_indices, thresholds, weights)
+        #new_indices = select_rndm_examples(missed_indices, 200)
+        #new_indices = select_min_avg_dist(missed_indices, 200, train_data, train_labels, positive_average, negative_average)
 
-        # Update the teacher set and add length to list
+        # Find the indices of the examples already present and remove them from the new ones
+        _, _, dup_indices = np.intersect1d(added_indices, new_indices, return_indices=True)
+        new_indices = np.delete(new_indices, dup_indices, axis=0)
+        added_indices = np.concatenate([added_indices, new_indices], axis=0)
+
+        data = tf.gather(train_data, new_indices)
+        labels = tf.gather(train_labels, new_indices)
+
+        # Add data and labels to teacher set and set length to list
         teaching_data = tf.concat([teaching_data, data], axis=0)
         teaching_labels = tf.concat([teaching_labels, labels], axis=0)
         teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
     
         # Update the model 
         hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs) 
-        new_acc = np.sum(hist.history.get('accuracy'))/epochs
-
-        # Remove used data and labels
-        train_data = tf.convert_to_tensor(np.delete(train_data, added_indices, axis=0))
-        train_labels = tf.convert_to_tensor(np.delete(train_labels, added_indices, axis=0))
-        thresholds = np.delete(thresholds, added_indices, axis=0)
-        weights = np.ones(shape=len(train_data))/len(train_data) # Reset weights
+        accuracy = np.sum(hist.history.get('accuracy'))/epochs
 
         ite += 1
 
