@@ -3,7 +3,7 @@
 
 """
 Contains the main functions for different strategies. 
-Date: 13/5/2020
+Date: 16/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -132,6 +132,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0
     # Initialize teaching data and labels
     teaching_data = tf.gather(train_data, init_indices)
     teaching_labels = tf.gather(train_labels, init_indices)
+    added_indices = np.concatenate([added_indices, init_indices], axis=0)
 
     # Initialize the model
     hist = model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs)
@@ -145,7 +146,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0
         # Find all the missed examples indices
         missed_indices = np.where(tf.norm(np.round(model.predict(train_data), 1)-train_labels, axis=1) != 0)[0]
 
-        if missed_indices.size == 0 or accuracy > 0.90:
+        if missed_indices.size == 0 or accuracy > 0.80:
             # All examples are placed correctly or sufficiently precise
             break
 
@@ -155,8 +156,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0
         #new_indices = select_min_avg_dist(missed_indices, 200, train_data, train_labels, positive_average, negative_average)
 
         # Find the indices of the examples already present and remove them from the new ones
-        _, _, dup_indices = np.intersect1d(added_indices, new_indices, return_indices=True)
-        new_indices = np.delete(new_indices, dup_indices, axis=0)
+        new_indices = np.setdiff1d(new_indices, added_indices)
         added_indices = np.concatenate([added_indices, new_indices], axis=0)
 
         data = tf.gather(train_data, new_indices)
@@ -166,10 +166,11 @@ def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0
         teaching_data = tf.concat([teaching_data, data], axis=0)
         teaching_labels = tf.concat([teaching_labels, labels], axis=0)
         teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
-    
-        # Update the model 
-        hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs) 
-        accuracy = np.sum(hist.history.get('accuracy'))/epochs
+
+        if len(new_indices) != 0: 
+            # Update the model 
+            hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs) 
+            accuracy = np.sum(hist.history.get('accuracy'))/epochs
 
         ite += 1
 
@@ -192,10 +193,8 @@ def two_step_curriculum(data, labels):
                 associated with the data.
                 First dimension, number of examples.
                 Second dimension, one hot label | label.
-    Output: easy_indices -> np.array[int], list indices associated
-                with the easy examples of the data.
-            hard_indices -> np.array[int], list of hard indices associatied
-                with the hard examples of the data.
+    Output: curriculum_indices -> list[np.array[int]], list of indices 
+                sorted from easy to hard.
     """
 
     # Get number of classes
@@ -206,15 +205,16 @@ def two_step_curriculum(data, labels):
     
     classes = np.random.choice(range(max_class_nb), max_class_nb, replace=False)
     averages = average_examples(data, labels)  # List of average example for each class
+    indices = find_indices(labels)       # List of indices of examples for each class
     examples = find_examples(data, labels)     # List of examples for each class
 
     for i in classes:
         dist = tf.norm(averages[i]-examples[i], axis=(1, 2)) # Estimate distance to average
 
-        easy_indices = np.concatenate([easy_indices, np.where(dist <= np.mean(dist))[0]], axis=0)
-        hard_indices = np.concatenate([hard_indices, np.where(dist > np.mean(dist))[0]], axis=0)
+        easy_indices = np.concatenate([easy_indices, indices[i][np.where(dist <= np.mean(dist))[0]]], axis=0)
+        hard_indices = np.concatenate([hard_indices, indices[i][np.where(dist > np.mean(dist))[0]]], axis=0)
         
-    return easy_indices, hard_indices
+    return [easy_indices, hard_indices]
 
 
 def curriculum_training(train_data, train_labels, test_data, test_labels, class_nb=0, batch_size=32, epochs=10, multiclass=False):
@@ -258,16 +258,15 @@ def curriculum_training(train_data, train_labels, test_data, test_labels, class_
 
     model = model_init(train_data[0].shape, max_class_nb) # Declare model
     acc_hist = np.array([], dtype=np.float32)  # List for the accuracies
-    easy_indices, hard_indices = two_step_curriculum(train_data, train_labels)
+    curriculum_indices = two_step_curriculum(train_data, train_labels)
 
     # Convert train labels to one hot labels
     train_labels = prep_data(train_labels, class_nb, multiclass)
 
     # Train model with easy then hard examples
-    hist = model.fit(tf.gather(train_data, easy_indices), tf.gather(train_labels, easy_indices), batch_size=batch_size, epochs=epochs//2)
-    acc_hist = np.concatenate((acc_hist, hist.history.get('accuracy')), axis=0) 
-    hist = model.fit(tf.gather(train_data, hard_indices), tf.gather(train_labels, hard_indices), batch_size=batch_size, epochs=epochs//2)
-    acc_hist = np.concatenate((acc_hist, hist.history.get('accuracy')), axis=0) 
+    for i in range(len(curriculum_indices)):
+        hist = model.fit(tf.gather(train_data, curriculum_indices[i]), tf.gather(train_labels, curriculum_indices[i]), batch_size=batch_size, epochs=epochs//2)
+        acc_hist = np.concatenate((acc_hist, hist.history.get('accuracy')), axis=0) 
 
     # Test the model
     accuracy = model.evaluate(test_data, test_labels, batch_size=batch_size)
@@ -308,6 +307,9 @@ def create_spc_set(train_data, train_labels, loop_ite=1, class_nb=0,  batch_size
     """
 
     ite = 0
+    added_indices = [] # List to keep track of used indices
+    sorted_data = []   # List of data after using curriculum
+    sorted_labels = [] # List of labels after using curriculum
 
     # Get number of classes
     max_class_nb = find_class_nb(train_labels, multiclass)
@@ -327,36 +329,44 @@ def create_spc_set(train_data, train_labels, loop_ite=1, class_nb=0,  batch_size
     train_labels = prep_data(train_labels, class_nb, multiclass)
     model = model_init(train_data[0].shape, max_class_nb)
     
+    # Seperate data using a curriculum
+    curriculum_indices = two_step_curriculum(train_data, train_labels) 
+
+    for i in range(len(curriculum_indices)):
+        # Extract curriculum data
+        sorted_data.append(tf.gather(train_data, curriculum_indices[i]))
+        sorted_labels.append(tf.gather(train_labels, curriculum_indices[i]))
+
+        # Added inital indices to list of used indices 
+        _, _, intersect_indices = np.intersect1d(curriculum_indices[i], init_indices, return_indices=True)
+        added_indices.append(intersect_indices)
+
     # Initialize data and labels
-    data = tf.gather(train_data, init_indices)
-    labels = tf.gather(train_labels, init_indices)
-
-    # Remove used examples from train data and labels
-    train_data = tf.convert_to_tensor(np.delete(train_data, init_indices, axis=0))
-    train_labels = tf.convert_to_tensor(np.delete(train_labels, init_indices, axis=0))
-
-    # Seperate data using two step curriculum
-    easy_indices, hard_indices = two_step_curriculum(train_data, train_labels) 
-    easy_data = tf.gather(train_data, easy_indices)
-    easy_labels = tf.gather(train_labels, easy_indices)
-    hard_data = tf.gather(train_data, hard_indices)
-    hard_labels = tf.gather(train_labels, hard_indices)
+    data = tf.gather(train_data, np.concatenate(added_indices, axis=0))
+    labels = tf.gather(train_labels, np.concatenate(added_indices, axis=0))
 
     # Initialize the model
     model.fit(data, labels, batch_size=2, epochs=epochs)
 
     while ite != loop_ite:
-        # Find indices to add
-        easy_added_indices = np.where(tf.norm(np.round(model.predict(easy_data), 1)-easy_labels, axis=1) == 0)[0]
-        easy_added_data = tf.gather(easy_data, easy_added_indices)
-        easy_added_labels = tf.gather(easy_labels, easy_added_indices)
 
-        hard_added_indices = np.where(tf.norm(np.round(model.predict(hard_data), 1)-hard_labels, axis=1) == 0)[0]
-        hard_added_data = tf.gather(hard_data, hard_added_indices)
-        hard_added_labels = tf.gather(hard_labels, hard_added_indices)
+        # Create lists for data and labels
+        new_data = []
+        new_labels = []
 
-        added_data = tf.concat([easy_added_data, hard_added_data], axis=0)
-        added_labels = tf.concat([easy_added_labels, hard_added_labels], axis=0) 
+        for i in range(len(added_indices)):
+            # Find indices to add
+            found_indices = np.where(tf.norm(np.round(model.predict(sorted_data[i]), 1)-sorted_labels[i], axis=1) == 0)[0] 
+
+            # Find the indices of the examples not present already 
+            new_indices = np.setdiff1d(found_indices, added_indices[i])
+            added_indices[i] = np.concatenate([added_indices[i], new_indices], axis=0)
+            
+            new_data.append(tf.gather(sorted_data[i], new_indices))
+            new_labels.append(tf.gather(sorted_labels[i], new_indices))
+        
+        added_data = tf.concat(new_data, axis=0)
+        added_labels = tf.concat(new_labels, axis=0)
 
         if len(added_data) == 0:
             # If no examples where found
@@ -370,17 +380,12 @@ def create_spc_set(train_data, train_labels, loop_ite=1, class_nb=0,  batch_size
             # Update model
             model.fit(added_data, added_labels, batch_size=batch_size, epochs=epochs)
 
-        # Remove used data and labels
-        easy_data = tf.convert_to_tensor(np.delete(easy_data, easy_added_indices, axis=0))
-        easy_labels = tf.convert_to_tensor(np.delete(easy_labels, easy_added_indices, axis=0))
-        hard_data = tf.convert_to_tensor(np.delete(hard_data, hard_added_indices, axis=0))
-        hard_labels = tf.convert_to_tensor(np.delete(hard_labels, hard_added_indices, axis=0))
-
         ite+=1
 
-    # Add remaining data and labels
-    data = tf.concat([data, easy_data, hard_data], axis=0)
-    labels = tf.concat([labels, easy_labels, hard_labels], axis=0)
+    for i in range(len(added_indices)):
+        # Add remaining data and labels
+        indices = np.setdiff1d(range(len(sorted_data[i])), added_indices[i])
+        data = tf.concat([data, tf.gather(sorted_data[i], indices)], axis=0)
+        labels = tf.concat([labels, tf.gather(sorted_labels[i], indices)], axis=0)
 
     return data, labels
-
