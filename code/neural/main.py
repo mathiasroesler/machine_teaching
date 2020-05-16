@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 13/5/2020
+Date: 15/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -23,7 +23,7 @@ def main(data_name):
     """
 
     # Variables for machine teaching
-    exp_rate = 100
+    exp_rate = 120
     set_limit = 10000 
 
     # Variables for neural networks
@@ -38,7 +38,7 @@ def main(data_name):
     class_nb = 3
     multiclass = True 
     iteration_nb = 1
-    loop_ite = 1
+    loop_ite = 3
 
     # Accuracy lists
     mt_accuracies = np.zeros(epochs+1, dtype=np.float32)   # Machine teaching
@@ -55,6 +55,7 @@ def main(data_name):
         # Prepare test data labels
         test_labels = prep_data(test_labels, class_nb, multiclass)
 
+        """
         ### MT TRAIN ###
         # Find optimal set
         print("\nGenerating optimal set")
@@ -70,7 +71,6 @@ def main(data_name):
         # Add machine teaching time
         times[0] += toc-tic
 
-        """
         ### CURRICULUM TRAIN ###
         # Train model with curriculum
         print("\nCurriculum training")
@@ -82,6 +82,7 @@ def main(data_name):
         times[1] += toc-tic
 
 
+        """
         ### SPC TRAIN ###
         # Train model with SPC
         print("\nGenerating SPC set")
@@ -95,7 +96,6 @@ def main(data_name):
         # Add SPC time
         times[2] += toc-tic
 
-        """
         ### FULL TRAIN ###
         # Train model with the all the examples
         print("\nFull training")
