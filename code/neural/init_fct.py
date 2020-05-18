@@ -30,14 +30,24 @@ def model_init(data_shape, max_class_nb):
         print("Error in function model_init: max_class_nb must be an integer greater or equal to 2.")
         exit(1)
 
+    try:
+        assert(len(data_shape) == 3)
+        assert(data_shape[0] == data_shape[1])
+        input_shape = data_shape
+
+    except AssertionError:
+        print("Error in function model_init: data_shape must have 3 elements with the two first ones equal.")
+        exit(1)
+
     model = tf.keras.models.Sequential() # Sequential neural network
 
     # Add layers to model
-    if (data_shape == (28, 28, 1)):
+    if (data_shape[0] == 28):
         # Pad the input to be 32x32
-        model.add(ZeroPadding2D(2, input_shape=data_shape))
+        model.add(ZeroPadding2D(2, input_shape=input_shape))
+        input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
 
-    model.add(Conv2D(6, (5, 5), activation='relu', input_shape=(32, 32, 1)))
+    model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape))
     model.add(MaxPool2D(pool_size=(2, 2)))
     model.add(Conv2D(16, (5, 5), activation='relu'))
     model.add(MaxPool2D(pool_size=(2, 2)))
@@ -112,6 +122,6 @@ def nearest_avg_init(data, labels):
         # Select nearest example for each class
         dist = tf.norm(averages[i]-examples[i], axis=(1, 2)) # Estimate distance to average
 
-        init_indices[i] = indices[i][np.argmin(dist)]
+        init_indices[i] = indices[i][np.argmin(np.mean(dist, axis=1))]
 
     return init_indices
