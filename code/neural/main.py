@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 15/5/2020
+Date: 18/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -24,10 +24,9 @@ def main(data_name):
 
     # Variables for machine teaching
     exp_rate = 120
-    set_limit = 10000 
 
     # Variables for neural networks
-    epochs = 5
+    epochs = 6
     batch_size = 32
 
     # Variables for plotting
@@ -55,12 +54,23 @@ def main(data_name):
         # Prepare test data labels
         test_labels = prep_data(test_labels, class_nb, multiclass)
 
-        """
+        ### FULL TRAIN ###
+        # Train model with the all the examples
+        print("\nFull training")
+        print("\nSet length: ", len(train_data))
+        tic = process_time()
+        acc_list[3] += classic_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
+        toc = process_time()
+
+        # Add full training time
+        times[3] += toc-tic
+
+
         ### MT TRAIN ###
         # Find optimal set
         print("\nGenerating optimal set")
         tic = process_time()
-        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, exp_rate, set_limit, batch_size=5, epochs=1, multiclass=multiclass)
+        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, exp_rate, acc_list[3][-2], batch_size=5, epochs=1, multiclass=multiclass)
 
         # Train model with teaching set
         print("\nMachine teaching training")
@@ -70,6 +80,7 @@ def main(data_name):
 
         # Add machine teaching time
         times[0] += toc-tic
+
 
         ### CURRICULUM TRAIN ###
         # Train model with curriculum
@@ -82,7 +93,6 @@ def main(data_name):
         times[1] += toc-tic
 
 
-        """
         ### SPC TRAIN ###
         # Train model with SPC
         print("\nGenerating SPC set")
@@ -95,18 +105,6 @@ def main(data_name):
         
         # Add SPC time
         times[2] += toc-tic
-
-        ### FULL TRAIN ###
-        # Train model with the all the examples
-        print("\nFull training")
-        print("\nSet length: ", len(train_data))
-        tic = process_time()
-        acc_list[3] += classic_training(train_data, train_labels, test_data, test_labels, class_nb, epochs=epochs, multiclass=multiclass)
-        toc = process_time()
-
-        # Add full training time
-        times[3] += toc-tic
-
 
     # Average time and accuracies
     times = times/iteration_nb

@@ -3,7 +3,7 @@
 
 """
 Contains the main functions for different strategies. 
-Date: 16/5/2020
+Date: 18/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -70,7 +70,7 @@ def classic_training(train_data, train_labels, test_data, test_labels, class_nb=
 ### MACHINE TEACHING ###
 
 
-def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0, batch_size=32, epochs=10, multiclass=False):
+def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=0, batch_size=32, epochs=10, multiclass=False):
     """ Produces the optimal teaching set given the train_data and
     a lambda coefficiant. If the teacher cannot converge in 
     ite_max_nb then it returns None.
@@ -84,8 +84,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0
                 Second dimension, label | one hot label.
             exp_rate -> int, coefficiant for the exponential distribution
                 for the thresholds.
-            set_limit -> int, maximum number of examples to be put in the 
-                teaching set.
+            target_acc -> float, accuracy at which to stop the algorithm. 
             class_nb -> int, class selected for the one vs all.
             batch_size -> int, number of examples used in a batch for the neural
                 network.
@@ -138,7 +137,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0
     hist = model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs)
     accuracy = np.sum(hist.history.get('accuracy'))/epochs
 
-    while len(teaching_data) != len(train_data) and len(teaching_data) < set_limit:
+    while len(teaching_data) != len(train_data):
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
 
         weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
@@ -146,7 +145,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, set_limit, class_nb=0
         # Find all the missed examples indices
         missed_indices = np.where(tf.norm(np.round(model.predict(train_data), 1)-train_labels, axis=1) != 0)[0]
 
-        if missed_indices.size == 0 or accuracy > 0.80:
+        if missed_indices.size == 0 or accuracy >= target_acc:
             # All examples are placed correctly or sufficiently precise
             break
 
@@ -210,9 +209,9 @@ def two_step_curriculum(data, labels):
 
     for i in classes:
         dist = tf.norm(averages[i]-examples[i], axis=(1, 2)) # Estimate distance to average
-
-        easy_indices = np.concatenate([easy_indices, indices[i][np.where(dist <= np.mean(dist))[0]]], axis=0)
-        hard_indices = np.concatenate([hard_indices, indices[i][np.where(dist > np.mean(dist))[0]]], axis=0)
+        score = tf.norm(dist-np.mean(dist, axis=0), axis=1)
+        easy_indices = np.concatenate([easy_indices, indices[i][np.where(score <= np.median(score))[0]]], axis=0)
+        hard_indices = np.concatenate([hard_indices, indices[i][np.where(score > np.median(score))[0]]], axis=0)
         
     return [easy_indices, hard_indices]
 
@@ -381,6 +380,7 @@ def create_spc_set(train_data, train_labels, loop_ite=1, class_nb=0,  batch_size
             model.fit(added_data, added_labels, batch_size=batch_size, epochs=epochs)
 
         ite+=1
+
 
     for i in range(len(added_indices)):
         # Add remaining data and labels
