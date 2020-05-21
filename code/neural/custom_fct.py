@@ -3,14 +3,99 @@
 
 """
 Custom functions for machine teaching.
-Date: 15/5/2020
+Date: 21/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
 import numpy as np
 import tensorflow as tf
-from sklearn import svm
+
+
+class SPLLoss:
+    """ Custom loss for self-paced learning. """
+
+    def __init__(self, threshold=np.finfo(np.float32).max, growth_factor=1.0, warm_up_ite=1):
+        """ Initialize the class with a threshold and a
+        growth factor.
+        Input:  threshold -> float, value below which SPL
+                    examples will be used for backpropagation.
+                growth_factor -> float, multiplicative value to 
+                    increase the threshold.
+        Output:
+        """
+
+        try:
+            assert(np.issubdtype(type(threshold), np.floating) or np.issubdtype(type(threshold), np.integer))
+            assert(np.issubdtype(type(growth_factor), np.floating) or np.issubdtype(type(growth_factor), np.integer))
+
+        except AssertionError:
+            print("Error in SPLLoss init function: the type of the inputs are incorrect")
+            exit(1)
+
+        self.threshold = threshold
+        self.growth_factor = growth_factor
+        self.warm_up_ite = warm_up_ite 
+        self.loss_ite = -1 # Counts the number of times the loss function has been called
+
+
+    def loss(self, found_labels, true_labels):
+        """ Calculates the SPL loss given the found and true labels.
+        Input:  found_labels -> tf.tensor[tf.double], labels estimated
+                    by the model.
+                true_labels -> tf.tensor[tf.double], true labels for the
+                    examples.
+        Output: 
+        """
+
+        try:
+            assert(tf.is_tensor(found_labels))
+            assert(tf.is_tensor(true_labels))
+
+        except AssertionError:
+            # If not tensors
+            found_labels = tf.convert_to_tensor(found_labels, dtype=tf.float32)
+            true_labels = tf.convert_to_tensor(true_labels, dtype=tf.float32)
+
+        loss_function = tf.keras.losses.CategoricalCrossentropy(reduction="none")
+        self.loss_ite += 1
+
+        if self.loss_ite <= self.warm_up_ite:
+            # If the model is not "warmed up"
+            return tf.reduce_mean(loss_function(found_labels, true_labels))
+
+        else:
+            custom_loss = loss_function(found_labels, true_labels) # Estimate loss
+            v = tf.cast(custom_loss < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold
+            self.threshold *= self.growth_factor # Update the threshold
+            return tf.reduce_mean(v*custom_loss) 
+
+
+def is_empty(array):
+    """ Checks if the elements in the array are empty or not.
+    Input:  array -> np.array(np.array()), list of lists.
+    Output: empty -> bool, True if all the lists in array are
+                empty, False otherwise.
+    """
+
+    # Check that array is an array or a list
+    try:
+        assert(isinstance(array, (list, np.ndarray)))
+
+    except AssertionError:
+        print("Error in function is_empty: the input must be a list or an numpy array.")
+        exit(1)
+
+    for element in array: 
+        # Check that element is an array or a list with exception
+        try: 
+            if len(element) != 0:
+                return False
+        except TypeError:
+            print("Error in function is_empty: the elements of the input must be lists or numpy arrays.")
+            exit(1)
+
+    return True
 
 
 def find_indices(labels):

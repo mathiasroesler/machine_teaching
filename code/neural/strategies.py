@@ -3,7 +3,7 @@
 
 """
 Contains the main functions for different strategies. 
-Date: 18/5/2020
+Date: 21/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -16,7 +16,7 @@ from selection_fct import *
 from init_fct import *
 
 
-def classic_training(train_data, train_labels, test_data, test_labels, class_nb=0,  batch_size=32, epochs=10, multiclass=False, shuffle=True):
+def classic_training(train_data, train_labels, test_data, test_labels, class_nb=0,  batch_size=32, epochs=10, multiclass=False, threshold=np.finfo(np.float32).max, growth_rate=1.0):
     """ Trains a student model fitted with the train set and
     tested with the test set. 
     Input:  train_data -> tf.tensor[float32], list
@@ -42,7 +42,10 @@ def classic_training(train_data, train_labels, test_data, test_labels, class_nb=
                 network.
             epochs -> int, number of epochs for the training of the neural network.
             multiclass -> bool, True if more than 2 classes.
-            shuffle -> bool, if True the train data is shuffle at train.
+            threshold -> float, value below which SPL
+                examples will be used for backpropagation.
+            growth_factor -> float, multiplicative value to 
+                increase the threshold.
     Output: accuracies -> np.array[float32], accuracies for the training and the test. 
     """
  
@@ -59,9 +62,9 @@ def classic_training(train_data, train_labels, test_data, test_labels, class_nb=
 
     # Convert labels to one hot and declare model
     train_labels = prep_data(train_labels, class_nb, multiclass)
-    model = model_init(train_data[0].shape, max_class_nb)
+    model = model_init(train_data[0].shape, max_class_nb, threshold, growth_rate)
     
-    hist = model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs, shuffle=shuffle)
+    hist = model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
     test_score = model.evaluate(test_data, test_labels, batch_size=batch_size)
 
     return np.array(np.append(hist.history.get('accuracy'), [test_score[1]]), dtype=np.float32)
@@ -134,8 +137,8 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
     added_indices = np.concatenate([added_indices, init_indices], axis=0)
 
     # Initialize the model
-    hist = model.fit(teaching_data, teaching_labels, batch_size=batch_size, epochs=epochs)
-    accuracy = np.sum(hist.history.get('accuracy'))/epochs
+    hist = model.fit(teaching_data, teaching_labels, batch_size=2, epochs=epochs)
+    accuracy = hist.history.get('accuracy')[-1]
 
     while len(teaching_data) != len(train_data):
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
@@ -158,18 +161,18 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
         new_indices = np.setdiff1d(new_indices, added_indices)
         added_indices = np.concatenate([added_indices, new_indices], axis=0)
 
-        data = tf.gather(train_data, new_indices)
-        labels = tf.gather(train_labels, new_indices)
-
-        # Add data and labels to teacher set and set length to list
-        teaching_data = tf.concat([teaching_data, data], axis=0)
-        teaching_labels = tf.concat([teaching_labels, labels], axis=0)
-        teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
-
         if len(new_indices) != 0: 
-            # Update the model 
-            hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs) 
-            accuracy = np.sum(hist.history.get('accuracy'))/epochs
+            # Update the data for the model 
+            data = tf.gather(train_data, new_indices)
+            labels = tf.gather(train_labels, new_indices)
+
+            # Add data and labels to teacher set and set length to list
+            teaching_data = tf.concat([teaching_data, data], axis=0)
+            teaching_labels = tf.concat([teaching_labels, labels], axis=0)
+            teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
+
+        hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs) 
+        accuracy = hist.history.get('accuracy')[-1]
 
         ite += 1
 
@@ -272,120 +275,3 @@ def curriculum_training(train_data, train_labels, test_data, test_labels, class_
 
     return np.concatenate((acc_hist, [accuracy[1]]), axis=0)
 
-
-### SELF-PACED CURRICULUM ###
-
-
-def create_spc_set(train_data, train_labels, loop_ite=1, class_nb=0,  batch_size=32, epochs=10, multiclass=False):
-    """ Creates the data set for self-paced curriculum learning.
-    Input:  train_data -> tf.tensor[float32], list of examples. 
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            train_labels -> np.array[int], list of labels associated
-                with the train data.
-                First dimension, number of examples.
-                Second dimension, label.
-            loop_ite -> int, number of loop iterations for selecting examples.
-            batch_size -> int, number of examples used in a batch for the neural
-                network.
-            epochs -> int, number of epochs for the training of the neural network.
-            class_nb -> int, class selected for the one vs all.
-            batch_size -> int, number of examples used in a batch for the neural
-                network.
-            epochs -> int, number of epochs for the training of the neural network.
-            multiclass -> bool, True if more than 2 classes.
-    Output: data -> tf.tensor[float32], list of examples for training.
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            labels -> np.array[int], list of labels associated
-                with the data.
-                First dimension, number of examples.
-                Second dimension, label.
-    """
-
-    ite = 0
-    added_indices = [] # List to keep track of used indices
-    sorted_data = []   # List of data after using curriculum
-    sorted_labels = [] # List of labels after using curriculum
-
-    # Get number of classes
-    max_class_nb = find_class_nb(train_labels, multiclass)
-
-    try:
-        assert(np.issubdtype(type(class_nb), np.integer))
-        assert(class_nb >= 0)
-
-    except AssertionError:
-        print("Error in function spc_training: class_nb must be an integer smaller than the number of classes.")
-        exit(1)
-
-    # Extract inital examples indices
-    init_indices = nearest_avg_init(train_data, train_labels)
-
-    # Create model and convert labels to one hot
-    train_labels = prep_data(train_labels, class_nb, multiclass)
-    model = model_init(train_data[0].shape, max_class_nb)
-    
-    # Seperate data using a curriculum
-    curriculum_indices = two_step_curriculum(train_data, train_labels) 
-
-    for i in range(len(curriculum_indices)):
-        # Extract curriculum data
-        sorted_data.append(tf.gather(train_data, curriculum_indices[i]))
-        sorted_labels.append(tf.gather(train_labels, curriculum_indices[i]))
-
-        # Added inital indices to list of used indices 
-        _, _, intersect_indices = np.intersect1d(curriculum_indices[i], init_indices, return_indices=True)
-        added_indices.append(intersect_indices)
-
-    # Initialize data and labels
-    data = tf.gather(train_data, np.concatenate(added_indices, axis=0))
-    labels = tf.gather(train_labels, np.concatenate(added_indices, axis=0))
-
-    # Initialize the model
-    model.fit(data, labels, batch_size=2, epochs=epochs)
-
-    while ite != loop_ite:
-
-        # Create lists for data and labels
-        new_data = []
-        new_labels = []
-
-        for i in range(len(added_indices)):
-            # Find indices to add
-            found_indices = np.where(tf.norm(np.round(model.predict(sorted_data[i]), 1)-sorted_labels[i], axis=1) == 0)[0] 
-
-            # Find the indices of the examples not present already 
-            new_indices = np.setdiff1d(found_indices, added_indices[i])
-            added_indices[i] = np.concatenate([added_indices[i], new_indices], axis=0)
-            
-            new_data.append(tf.gather(sorted_data[i], new_indices))
-            new_labels.append(tf.gather(sorted_labels[i], new_indices))
-        
-        added_data = tf.concat(new_data, axis=0)
-        added_labels = tf.concat(new_labels, axis=0)
-
-        if len(added_data) == 0:
-            # If no examples where found
-            ite-=1
-
-        else:
-            # Update the data and labels
-            data = tf.concat([data, added_data], axis=0)
-            labels = tf.concat([labels, added_labels], axis=0)
-
-            # Update model
-            model.fit(added_data, added_labels, batch_size=batch_size, epochs=epochs)
-
-        ite+=1
-
-
-    for i in range(len(added_indices)):
-        # Add remaining data and labels
-        indices = np.setdiff1d(range(len(sorted_data[i])), added_indices[i])
-        data = tf.concat([data, tf.gather(sorted_data[i], indices)], axis=0)
-        labels = tf.concat([labels, tf.gather(sorted_labels[i], indices)], axis=0)
-
-    return data, labels

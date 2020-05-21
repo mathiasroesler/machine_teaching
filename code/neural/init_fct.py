@@ -3,7 +3,7 @@
 
 """
 Contains the functions for the initialization of the teacher.
-Date: 7/5/2020
+Date: 21/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -15,10 +15,14 @@ from numpy.random import default_rng
 from custom_fct import *
 
 
-def model_init(data_shape, max_class_nb):
+def model_init(data_shape, max_class_nb, threshold=np.finfo(np.float32).max, growth_factor=1.0):
     """ Initializes the model.
     Input:  data_shape -> tuple[int], shape of the input data. 
             max_class_nb -> int, number of classes.
+            threshold -> float, value below which SPL
+                examples will be used for backpropagation.
+            growth_factor -> float, multiplicative value to 
+                increase the threshold.
     Output: model -> CNN model
     """
 
@@ -56,8 +60,11 @@ def model_init(data_shape, max_class_nb):
     model.add(Dense(84, activation='relu'))
     model.add(Dense(max_class_nb, activation='softmax'))
 
+    # Create a custom loss object
+    custom_loss = SPLLoss(threshold, growth_factor)
+
     # Compile model
-    model.compile(loss='categorical_crossentropy',
+    model.compile(loss=custom_loss.loss,
                 optimizer=tf.keras.optimizers.Adam(),
                 metrics=['accuracy']
                 )
