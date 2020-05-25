@@ -69,18 +69,14 @@ def find_examples(data, labels):
     return examples
 
 
-def find_class_nb(labels, multiclass=True):
+def find_class_nb(labels):
     """ Finds the highest class number. The first class must be 0.
     Input:  labels -> tf.tensor[int] | np.array[int], list of labels associated
                 with the data.
                 First dimension, number of examples.
                 Second dimension, one hot label | label.
-            multiclass -> bool, True if more than 2 classes.
     Output: class_nb -> int, number of classes.
     """
-
-    if not multiclass:
-        return 2
 
     if tf.is_tensor(labels):
         # If labels are one hot

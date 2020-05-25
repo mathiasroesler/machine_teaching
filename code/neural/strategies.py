@@ -11,6 +11,7 @@ Mail: roesler.mathias@cmi-figure.fr
 import numpy as np
 import tensorflow as tf
 from data_fct import prep_data
+from custom_model import *
 from misc_fct import *
 from selection_fct import *
 from init_fct import *
@@ -19,7 +20,7 @@ from init_fct import *
 ### MACHINE TEACHING ###
 
 
-def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=0, batch_size=32, epochs=10, multiclass=False):
+def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch_size=32, epochs=10):
     """ Produces the optimal teaching set given the train_data and
     a lambda coefficiant. If the teacher cannot converge in 
     ite_max_nb then it returns None.
@@ -32,7 +33,6 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
             exp_rate -> int, coefficiant for the exponential distribution
                 for the thresholds.
             target_acc -> float, accuracy at which to stop the algorithm. 
-            class_nb -> int, class selected for the one vs all.
             batch_size -> int, number of examples used in a batch for the neural
                 network.
             epochs -> int, number of epochs for the training of the neural network.
@@ -49,15 +49,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
     rng = default_rng() # Set seed 
 
     # Get number of classes
-    max_class_nb = find_class_nb(train_labels, multiclass)
-
-    try:
-        assert(np.issubdtype(type(class_nb), np.integer))
-        assert(class_nb >= 0)
-
-    except AssertionError:
-        print("Error in function create_teacher_set: class_nb must be an integer smaller than the number of classes.")
-        exit(1)
+    max_class_nb = find_class_nb(train_labels)
 
     # Variables
     ite = 1
@@ -71,6 +63,8 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
     #init_indices = rndm_init(train_labels)
     init_indices = nearest_avg_init(train_data, train_labels)
 
+    # Declare model
+    model = CustomModel(train_data[0].shape, max_class_nb)
 
     # Initialize teaching data and labels
     teaching_data = tf.gather(train_data, init_indices)
@@ -78,8 +72,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
     added_indices = np.concatenate([added_indices, init_indices], axis=0)
 
     # Initialize the model
-    hist = model.fit(teaching_data, teaching_labels, batch_size=2, epochs=epochs)
-    accuracy = hist.history.get('accuracy')[-1]
+    model.train(teaching_data, teaching_labels, epochs=epochs, batch_size=2)
 
     while len(teaching_data) != len(train_data):
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
@@ -87,7 +80,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
         weights = np.ones(shape=(nb_examples))/nb_examples # Weights for each example
 
         # Find all the missed examples indices
-        missed_indices = np.where(tf.norm(np.round(model(train_data), 1)-train_labels, axis=1) != 0)[0]
+        missed_indices = np.where(np.argmax(model.model.predict(train_data), axis=1)-train_labels != 0)[0]
 
         if missed_indices.size == 0 or accuracy >= target_acc:
             # All examples are placed correctly or sufficiently precise
@@ -112,8 +105,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
             teaching_labels = tf.concat([teaching_labels, labels], axis=0)
             teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
 
-        hist = model.fit(data, labels, batch_size=batch_size, epochs=epochs) 
-        accuracy = hist.history.get('accuracy')[-1]
+        model.train(data, labels, batch_size=batch_size, epochs=epochs) 
 
         ite += 1
 

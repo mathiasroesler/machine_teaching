@@ -40,7 +40,6 @@ def main(data_name):
 
     # Other variables
     class_nb = 3
-    multiclass = True 
     iteration_nb = 1
     loop_ite = 3
 
@@ -55,11 +54,15 @@ def main(data_name):
         # Extract data from files
         train_data, test_data, train_labels, test_labels = extract_data(data_name)
 
+        #test_labels = prep_data(test_labels, class_nb)
+        #train_labels = prep_data(train_labels, class_nb)
+
         # Declare models
-        model = CustomModel(train_data[0].shape, 10, multiclass=True)
-        CL_model = CustomModel(train_data[0].shape, 10, multiclass=True)
-        MT_model = CustomModel(train_data[0].shape, 10, multiclass=True)
-        SPL_model = CustomModel(train_data[0].shape, 10, multiclass=True)
+        model = CustomModel(train_data[0].shape, 10)
+        CL_model = CustomModel(train_data[0].shape, 10)
+        MT_model = CustomModel(train_data[0].shape, 10)
+        SPL_model = CustomModel(train_data[0].shape, 10)
+
 
         ### FULL TRAIN ###
         # Train model with the all the examples
@@ -79,12 +82,12 @@ def main(data_name):
         test_acc_list[3] += model.test_acc
         times[3] += toc-tic
 
-        """
+
         ### MT TRAIN ###
         # Find optimal set
         print("\nGenerating optimal set")
         tic = process_time()
-        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, exp_rate, train_acc_list[3][-2], batch_size=batch_size, epochs=4, multiclass=multiclass)
+        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, exp_rate, batch_size=batch_size, epochs=4)
 
         # Train model with teaching set
         print("\nMachine teaching training")
@@ -101,7 +104,6 @@ def main(data_name):
         test_acc_list[0] += MT_model.test_acc
         times[0] += toc-tic
 
-        """
 
         ### CURRICULUM TRAIN ###
         # Train model with curriculum

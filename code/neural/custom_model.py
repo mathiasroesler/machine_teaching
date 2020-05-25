@@ -21,7 +21,7 @@ class CustomModel:
     """ Custom neural network class. """
 
 
-    def __init__(self, data_shape, class_nb, multiclass=False):
+    def __init__(self, data_shape, class_nb):
         """ Initializes the model.
         Input:  data_shape -> tuple[int], shape of the input data. 
                 class_nb -> int, number of classes.
@@ -52,7 +52,6 @@ class CustomModel:
         # Class attributes
         self.model = tf.keras.models.Sequential() # Sequential neural network
         self.class_nb = class_nb
-        self.multiclass = multiclass
 
         # Loss attributes
         self.threshold = np.finfo(np.float32).max
