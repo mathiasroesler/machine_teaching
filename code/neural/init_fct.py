@@ -3,7 +3,7 @@
 
 """
 Contains the functions for the initialization of the teacher.
-Date: 21/5/2020
+Date: 25/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -12,7 +12,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten
 from numpy.random import default_rng 
-from custom_fct import *
+from misc_fct import *
 
 
 def model_init(data_shape, max_class_nb, threshold=np.finfo(np.float32).max, growth_factor=1.0):

@@ -160,7 +160,7 @@ class CustomModel:
         
         hist = self.model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
     
-        self.train_acc = hist.history.get('accuracy') 
+        self.train_acc = np.array(hist.history.get('accuracy'))
 
 
     def CL_train(self, train_data, train_labels, epochs=10, batch_size=32):

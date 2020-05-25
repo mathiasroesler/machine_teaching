@@ -71,9 +71,6 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc, class_nb=
     #init_indices = rndm_init(train_labels)
     init_indices = nearest_avg_init(train_data, train_labels)
 
-    # Create model and convert labels to one hot
-    train_labels = prep_data(train_labels, multiclass, class_nb) 
-    model = model_init(train_data[0].shape, max_class_nb)
 
     # Initialize teaching data and labels
     teaching_data = tf.gather(train_data, init_indices)

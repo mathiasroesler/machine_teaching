@@ -3,7 +3,7 @@
 
 """
 Contains the functions for selection of misclassified examples
-Date: 6/3/2020
+Date: 25/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -11,7 +11,7 @@ Mail: roesler.mathias@cmi-figure.fr
 import numpy as np
 import tensorflow as tf
 from numpy.random import default_rng 
-from custom_fct import *
+from misc_fct import *
 
 
 def select_examples(missed_indices, thresholds, weights):
@@ -63,10 +63,8 @@ def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positi
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            train_labels -> tf.tensor[int], list of labels associated
+            train_labels -> np.array[int], list of labels associated
                 with the train data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
             positive_average -> tf.tensor[float32], average positive example.
             negative_average -> tf.tensor[float32], average negative example.
     Output: added_indices -> np.array[int], list of indices of examples to be 
