@@ -3,7 +3,7 @@
 
 """
 Plot functions for machine teaching.
-Date: 13/5/2020
+Date: 25/5/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -12,14 +12,14 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib import colors
-from custom_fct import *
+from misc_fct import *
 from scipy.spatial import distance
 
 
 def plot_data(full_train_score, accuracy, example_nb, missed_len):
     """ Plots the data.
     Input:  full_train_score -> float, accuracy for the fully trained model.
-            accuracy -> np.array[int], accuracy at each iteration for
+            accuracy -> np.array[float32], accuracy at each iteration for
                 the optimally trained model.
             example_nb -> np.array[int], number of examples at each 
                 iteration for the optimally trained model.
@@ -58,12 +58,8 @@ def plot_avg_dist(data, labels, positive_average, negative_average):
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            labels -> tf.tensor[int], list of labels associated
+            labels -> np.array[int], list of labels associated
                 with the data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
-                First dimension number of examples.
-                Second dimension features.
             positive_average -> tf.tensor[float32], average positive example.
             negative_average -> tf.tensor[float32], average negative example.
     Output: 
@@ -100,10 +96,8 @@ def plot_example_dist(data, labels):
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            labels -> tf.tensor[int], list of labels associated
+            labels -> np.array[int], list of labels associated
                 with the data.
-                First dimension, number of examples.
-                Second dimension, one hot label.
     Output: 
     """
 
@@ -160,8 +154,7 @@ def plot_comp(acc_list, plot_types, plot_labels):
     """ Plot the comparaison between curriculum learning and machine
     teaching accuracies.
     Input:  acc_list -> list[np.array[float32]], list of accuracies for
-                each strategy. The last element of each accuracy list must
-                be the test accuracy.
+                each strategy.
             plot_types -> list[str], list of plot color and type for each
                 strategy.
             plot_labels -> list[str], list of labels associated with each
@@ -179,7 +172,7 @@ def plot_comp(acc_list, plot_types, plot_labels):
     strategy_nb = len(acc_list)
 
     for i in range(strategy_nb):
-        plt.plot(range(len(acc_list[i])-1), acc_list[i][:-1], plot_types[i], label=plot_labels[i])
+        plt.plot(range(len(acc_list[i])), acc_list[i], plot_types[i], label=plot_labels[i])
 
     plt.xlabel("Iteration number")
     plt.ylabel("Accuracy")

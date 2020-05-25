@@ -124,9 +124,8 @@ def average_examples(data, labels):
 
 def display(acc_list, display_labels, times):
     """ Displays the test accuracies and the times.
-    Input:  acc_list -> list[np.array[float32]], list of accuracies for
-                each strategy. The last element of each accuracy list must
-                be the test accuracy.
+    Input:  acc_list -> list[float32], list of test accuracies for
+                each strategy.
             display_labels -> list[str], list of labels associated with each
                 strategy.
             times -> np.array[float32], list of times associated with each
@@ -148,10 +147,10 @@ def display(acc_list, display_labels, times):
     else:
         max_label_len = len("strategy")
 
-    print("\nStrategy".ljust(max_label_len, " "), " | Test accuracies | Times")
+    print("\nStrategy".ljust(max_label_len, " "), "| Test accuracies | Times")
 
     for i in range(len(acc_list)):
         label_str = display_labels[i].ljust(max_label_len, " ") + " |" 
-        acc_str = str(acc_list[i][-1])[:4].ljust(len("test accuracies"), " ") + " |"
+        acc_str = str(np.round(acc_list[i], 4)).ljust(len("test accuracies"), " ") + " |"
         
         print(label_str, acc_str, "%.2f" % times[i], "s")
