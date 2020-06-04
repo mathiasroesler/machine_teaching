@@ -344,7 +344,6 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
 
     # Initialize the model
     model.train(teaching_data, teaching_labels, epochs=epochs, batch_size=2)
-    accuracy = model.train_acc[-1]
 
     while len(teaching_data) != len(train_data):
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
