@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 25/5/2020
+Date: 04/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -57,11 +57,13 @@ def main(data_name):
         #test_labels = prep_data(test_labels, class_nb)
         #train_labels = prep_data(train_labels, class_nb)
 
+        max_class_nb = find_class_nb(train_labels) 
+
         # Declare models
-        model = CustomModel(train_data[0].shape, 10)
-        CL_model = CustomModel(train_data[0].shape, 10)
-        MT_model = CustomModel(train_data[0].shape, 10)
-        SPL_model = CustomModel(train_data[0].shape, 10)
+        model = CustomModel(train_data[0].shape, max_class_nb)
+        CL_model = CustomModel(train_data[0].shape, max_class_nb)
+        MT_model = CustomModel(train_data[0].shape, max_class_nb)
+        SPL_model = CustomModel(train_data[0].shape, max_class_nb)
 
 
         ### FULL TRAIN ###
@@ -121,15 +123,13 @@ def main(data_name):
         test_acc_list[1] += CL_model.test_acc
         times[1] += toc-tic
 
-        """
-
         ### SP TRAIN ###
         # Train model with SP
         tic = process_time()
 
         print("\nSelf-paced training")
 
-        SPL_model.SPL_train(train_data, train_labels, threshold, growth_factor, epochs=epochs)
+        SPL_model.SPL_train(train_data, train_labels, threshold, growth_rate, epochs=epochs)
 
         toc = process_time()
 
@@ -140,19 +140,17 @@ def main(data_name):
         test_acc_list[2] += SPL_model.test_acc
         times[2] += toc-tic
 
-        """
 
     # Average time and accuracies
     times = times/iteration_nb
 
-    breakpoint()
     for k in range(len(train_acc_list)):
         train_acc_list[k] = train_acc_list[k]/iteration_nb
         test_acc_list[k] = test_acc_list[k]/iteration_nb
 
     display(test_acc_list, plot_labels, times)
-    #plot_comp(train_acc_list, plot_types, plot_labels)
-
+    plot_comp(train_acc_list, plot_types, plot_labels)
+    
 
 print("Select cifar or mnist:")
 data_name = input().rstrip()
@@ -162,3 +160,4 @@ while data_name != "cifar" and data_name != "mnist":
     data_name = input().rstrip()
 
 main(data_name)
+
