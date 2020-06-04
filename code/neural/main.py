@@ -150,7 +150,6 @@ def main(data_name):
     display(test_acc_list, plot_labels, times)
     plot_comp(train_acc_list, plot_types, plot_labels)
     
-
 print("Select cifar or mnist:")
 data_name = input().rstrip()
 

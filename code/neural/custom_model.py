@@ -71,14 +71,14 @@ class CustomModel(tf.keras.Model):
             self.model.add(ZeroPadding2D(2, input_shape=input_shape))
             input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
 
-        self.model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape))
+        self.model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
         self.model.add(MaxPool2D(pool_size=(2, 2)))
-        self.model.add(Conv2D(16, (5, 5), activation='relu'))
+        self.model.add(Conv2D(16, (5, 5), activation='relu', kernel_initializer='random_normal'))
         self.model.add(MaxPool2D(pool_size=(2, 2)))
         self.model.add(Flatten(data_format='channels_last'))
-        self.model.add(Dense(120, activation='relu'))
-        self.model.add(Dense(84, activation='relu'))
-        self.model.add(Dense(self.class_nb, activation='softmax'))
+        self.model.add(Dense(120, activation='relu', kernel_initializer='random_normal'))
+        self.model.add(Dense(84, activation='relu', kernel_initializer='random_normal'))
+        self.model.add(Dense(self.class_nb, activation='softmax', kernel_initializer='random_normal'))
     
 
     def loss(self, data, labels, threshold, growth_rate, warm_up):
@@ -209,6 +209,14 @@ class CustomModel(tf.keras.Model):
                 epochs -> int, number of epochs for the training of the neural network.
         Output:
         """    
+
+        try:
+            assert(epochs > 1)
+            assert(np.issubdtype(type(epochs), np.integer))
+
+        except AssertionError:
+            print("Error in function SPL_train of CustomModel: the number of epochs must be an integer greater than 1")
+            exit(1)
 
         warm_up_ite = 100 # Iteration after which SP gradient is applied
         warm_up = True  # Indicates if the model is warming up or not
