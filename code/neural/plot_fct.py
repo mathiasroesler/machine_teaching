@@ -3,7 +3,7 @@
 
 """
 Plot functions for machine teaching.
-Date: 25/5/2020
+Date: 05/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -172,7 +172,7 @@ def plot_comp(acc_list, plot_types, plot_labels):
     strategy_nb = len(acc_list)
 
     for i in range(strategy_nb):
-        plt.plot(range(len(acc_list[i])), acc_list[i], plot_types[i], label=plot_labels[i])
+        plt.plot(range(1, len(acc_list[i])+1), acc_list[i], plot_types[i], label=plot_labels[i])
 
     plt.xlabel("Iteration number")
     plt.ylabel("Accuracy")
