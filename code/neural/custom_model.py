@@ -11,8 +11,7 @@ Mail: roesler.mathias@cmi-figure.fr
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten
-from tensorflow.keras.utils import Progbar
+from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten, Softmax, GlobalAveragePooling2D
 from data_fct import prep_data
 from misc_fct import *
 from selection_fct import *
@@ -44,7 +43,6 @@ class CustomModel(tf.keras.Model):
         try:
             assert(len(data_shape) == 3)
             assert(data_shape[0] == data_shape[1])
-            input_shape = data_shape
 
         except AssertionError:
             print("Error in init function of CustomModel: data_shape must have 3 elements with the two first ones equal.")
@@ -55,6 +53,12 @@ class CustomModel(tf.keras.Model):
         # Class attributes
         self.model = tf.keras.models.Sequential() # Sequential neural network
         self.class_nb = class_nb
+        self.architecture(data_shape, archi_type=2) # Add layers to model
+        print(self.model.summary())
+
+        # Model attributes
+        self.optimizer = tf.keras.optimizers.Adam()
+        self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
 
         # Loss attributes
         self.warm_up = 5
@@ -67,24 +71,62 @@ class CustomModel(tf.keras.Model):
         self.train_acc = np.array([], dtype=np.float32)
         self.test_acc = 0.0
 
-        # Model attributes
-        self.optimizer = tf.keras.optimizers.Adam()
-        self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
 
-        # Add layers to model
-        if (data_shape[0] == 28):
-            # Pad the input to be 32x32
-            self.model.add(ZeroPadding2D(2, input_shape=input_shape))
-            input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
+    def architecture(self, input_shape, archi_type=1):
+        """ Creates a model with a different architecture depending on the 
+        type.
+        Input:  input_shape -> tuple[int], shape of the input data. 
+                archi_type -> int, determines the implemented architecture.
+        Output: model -> tf.keras.models.Sequential, structured model.
+        """
 
-        self.model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
-        self.model.add(MaxPool2D(pool_size=(2, 2)))
-        self.model.add(Conv2D(16, (5, 5), activation='relu', kernel_initializer='random_normal'))
-        self.model.add(MaxPool2D(pool_size=(2, 2)))
-        self.model.add(Flatten(data_format='channels_last'))
-        self.model.add(Dense(120, activation='relu', kernel_initializer='random_normal'))
-        self.model.add(Dense(84, activation='relu', kernel_initializer='random_normal'))
-        self.model.add(Dense(self.class_nb, activation='softmax', kernel_initializer='random_normal'))
+        try:
+            assert(np.issubdtype(type(archi_type), np.integer))
+            assert(archi_type >= 1)
+
+        except AssertionError:
+            print("Error in architecture function of CustomModel: archi_type must be an integer greater or equal to 2.")
+            exit(1)
+
+
+        if archi_type == 1:
+            # Add layers to model
+            if (input_shape[0] == 28):
+                # Pad the input to be 32x32
+                self.model.add(ZeroPadding2D(2, input_shape=input_shape))
+                input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
+
+            self.model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
+            self.model.add(MaxPool2D(pool_size=(2, 2)))
+            self.model.add(Conv2D(16, (5, 5), activation='relu', kernel_initializer='random_normal'))
+            self.model.add(MaxPool2D(pool_size=(2, 2)))
+            self.model.add(Flatten(data_format='channels_last'))
+            self.model.add(Dense(120, activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Dense(84, activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Dense(self.class_nb, activation='softmax', kernel_initializer='random_normal'))
+
+        if archi_type == 2:
+            # Add layers to model
+            if (input_shape[0] == 28):
+                # Pad the input to be 32x32
+                self.model.add(ZeroPadding2D(2, input_shape=input_shape))
+                input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
+
+            self.model.add(Conv2D(96, (3, 3), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
+            self.model.add(Conv2D(96, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Conv2D(96, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Conv2D(192, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Conv2D(192, (1, 1), activation='relu', kernel_initializer='random_normal'))
+            self.model.add(Conv2D(10, (1, 1), activation='relu', kernel_initializer='random_normal'))
+            self.model.add(GlobalAveragePooling2D())
+            self.model.add(Softmax()) 
+
+
+
+
 
 
     def train(self, train_data, train_labels, epochs=10, batch_size=32):

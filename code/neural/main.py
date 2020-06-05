@@ -54,9 +54,6 @@ def main(data_name):
         # Extract data from files
         train_data, test_data, train_labels, test_labels = extract_data(data_name)
 
-        #test_labels = prep_data(test_labels, class_nb)
-        #train_labels = prep_data(train_labels, class_nb)
-
         max_class_nb = find_class_nb(train_labels) 
 
         # Declare models
@@ -65,6 +62,7 @@ def main(data_name):
         MT_model = CustomModel(train_data[0].shape, max_class_nb)
         SPL_model = CustomModel(train_data[0].shape, max_class_nb, warm_up, threshold, growth_rate)
 
+        breakpoint()
 
         ### FULL TRAIN ###
         # Train model with the all the examples
