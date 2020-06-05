@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 04/6/2020
+Date: 05/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -23,10 +23,13 @@ class CustomModel(tf.keras.Model):
     """ Custom neural network class. """
 
 
-    def __init__(self, data_shape, class_nb):
+    def __init__(self, data_shape, class_nb, warm_up=5, threshold_value=0.4, growth_rate_value=1.1):
         """ Initializes the model.
         Input:  data_shape -> tuple[int], shape of the input data. 
                 class_nb -> int, number of classes.
+                warm_up -> int, batch number after which the model is "warmed up".
+                threshold_value -> float32, initial value for SPL threshold.
+                growth_rate_value -> float32, initial value for SPL growth rate.
         Output: 
         """
 
@@ -54,8 +57,11 @@ class CustomModel(tf.keras.Model):
         self.class_nb = class_nb
 
         # Loss attributes
-        self.threshold = np.finfo(np.float32).max
-        self.growth_rate = 1
+        self.warm_up = 5
+        self.threshold_value = threshold_value
+        self.growth_rate_value = growth_rate_value
+        self.threshold = tf.Variable(np.finfo(np.float32).max, trainable=False, dtype=tf.float32)
+        self.growth_rate = tf.Variable(1, trainable=False, dtype=tf.float32)
 
         # Accuracy attributes
         self.train_acc = np.array([], dtype=np.float32)
@@ -79,61 +85,7 @@ class CustomModel(tf.keras.Model):
         self.model.add(Dense(120, activation='relu', kernel_initializer='random_normal'))
         self.model.add(Dense(84, activation='relu', kernel_initializer='random_normal'))
         self.model.add(Dense(self.class_nb, activation='softmax', kernel_initializer='random_normal'))
-    
 
-    def loss(self, data, labels, threshold, growth_rate, warm_up):
-        """ Calculates the loss for SPL training given the data and the labels.
-        Input:  data -> tf.tensor[float32], list of examples. 
-                    First dimension, number of examples.
-                    Second and third dimensions, image. 
-                    Fourth dimension, color channel. 
-                labels -> np.array[int], list of labels associated
-                    with the data.
-                threshold -> float, value below which SPL
-                    examples will be used for backpropagation.
-                growth_rate -> float, multiplicative value to 
-                    increase the threshold.
-                warm_up -> bool, when True use SP loss.
-        Output: loss_value -> tf.tensor[float32], calculated loss.
-        """
-
-        predicted_labels = self.model(data)
-
-        loss_function = tf.keras.losses.SparseCategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
-
-        if warm_up:
-            # If the model is still warming up
-            return tf.reduce_mean(loss_function(y_true=labels, y_pred=predicted_labels))
-
-        else:
-            loss_value = loss_function(y_true=labels, y_pred=predicted_labels) # Estimate loss
-            v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold
-            self.threshold *= self.growth_rate # Update the threshold
-            return tf.reduce_mean(v*loss_value) 
-
-
-    def gradient(self, data, labels, threshold, growth_rate, warm_up):
-        """ Calculates the gradients used to optimize the model.
-        Input:  data -> tf.tensor[float32], list of examples. 
-                    First dimension, number of examples.
-                    Second and third dimensions, image. 
-                    Fourth dimension, color channel. 
-                labels -> np.array[int], list of labels associated
-                    with the data.
-                threshold -> float, value below which SPL
-                    examples will be used for backpropagation.
-                growth_rate -> float, multiplicative value to 
-                    increase the threshold.
-                warm_up -> bool, when True use SP loss.
-        Output: loss_value -> tf.tensor[float32], calculated loss.
-                gradients -> list(), list of gradients.
-        """
-
-        with tf.GradientTape() as tape:
-            loss_value = self.loss(data, labels, threshold, growth_rate, warm_up)
-
-        return loss_value, tape.gradient(loss_value, self.model.trainable_variables)
-        
 
     def train(self, train_data, train_labels, epochs=10, batch_size=32):
         """ Trains the model with the given inputs.
@@ -148,6 +100,15 @@ class CustomModel(tf.keras.Model):
                 epochs -> int, number of epochs for the training of the neural network.
         Output:
         """    
+
+        try:
+            assert(epochs > 1)
+            assert(np.issubdtype(type(epochs), np.integer))
+
+        except AssertionError:
+            print("Error in function train of CustomModel: the number of epochs must be an integer greater than 1")
+            exit(1)
+
 
         # Compile model
         self.model.compile(loss=self.loss_function,
@@ -196,7 +157,7 @@ class CustomModel(tf.keras.Model):
             self.train_acc = np.concatenate((self.train_acc, hist.history.get('accuracy')), axis=0) 
 
 
-    def SPL_train(self, train_data, train_labels, threshold, growth_rate, epochs=10, batch_size=32):
+    def SPL_train(self, train_data, train_labels, epochs=10, batch_size=32):
         """ Trains the model using self-paced training and the given inputs. 
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
@@ -218,46 +179,63 @@ class CustomModel(tf.keras.Model):
             print("Error in function SPL_train of CustomModel: the number of epochs must be an integer greater than 1")
             exit(1)
 
-        warm_up_ite = 100 # Iteration after which SP gradient is applied
-        warm_up = True  # Indicates if the model is warming up or not
+        # Compile model
+        self.model.compile(loss=self.loss,
+                    optimizer=self.optimizer,
+                    metrics=['accuracy']
+                    )
 
-        for epoch in range(epochs):
-            # For each epoch
-            epoch_loss_avg = tf.keras.metrics.Mean()
-            epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
+        # Define callback functions
+        batch_callback = tf.keras.callbacks.LambdaCallback(
+                on_batch_end=lambda batch, logs: self.assign(batch)
+                )
+        epoch_callback = tf.keras.callbacks.LambdaCallback(
+                on_epoch_end=lambda epoch, logs: self.assign(epoch, reset=True)
+                )
 
-            ite = 0
-            print("Epoch {}/{}".format(epoch+1, epochs))
+        hist = self.model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs,
+                callbacks=[batch_callback, epoch_callback])
+    
+        self.train_acc = np.array(hist.history.get('accuracy'))
+        
 
-            bar = Progbar(train_data.shape[0]//batch_size, stateful_metrics=["loss", "accuracy"])
+    def loss(self, labels, predicted_labels):
+        """ Calculates the loss for SPL training given the data and the labels.
+        Input:  labels -> np.array[int], list of labels associated
+                    with the data.
+                predicted_labels -> np.array[int], list of labels estimated
+                    by the model.
+        Output: loss_value -> tf.tensor[float32], calculated loss.
+        """
 
-            for i in range(batch_size, train_data.shape[0]+batch_size-1, batch_size):
-                # Go through batches of data of size batch_size
-                data = train_data[ite:i]
-                labels = train_labels[ite:i]
+        loss_object = tf.keras.losses.SparseCategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
+        loss_value = loss_object(y_true=labels, y_pred=predicted_labels) # Estimate loss
+        v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold
+        self.threshold.assign(self.threshold*self.growth_rate) # Update the threshold
+        return tf.reduce_mean(v*loss_value) 
 
-                if i > warm_up_ite*batch_size:
-                    # When the model is warmed up
-                    warm_up = False
+    
+    def assign(self, batch, reset=False):
+        """ Assigns the values to the threshold and the growth
+        rate for the SPL training or resets them.
+        Input:  batch -> tf.int32, batch number.
+                reset -> bool, resets the threshold and the 
+                    growth rate if True.
+        Output: 
+        """
 
-                # Optimize the model
-                loss_value, gradients = self.gradient(data, labels, threshold, growth_rate, warm_up) 
-                self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+        if reset == True:
+            # At the end of each epoch reset values
+            self.threshold.assign(self.threshold_value)
+            self.growth_rate.assign(self.growth_rate_value)
 
-                # Track progress
-                epoch_loss_avg.update_state(loss_value)    # Add current batch loss
-                epoch_accuracy.update_state(labels, self.model(data)) # Compare predicted labels with true labels
-                ite = i
-                
-                # Display
-                values = [("loss", epoch_loss_avg.result()), ("accuracy", epoch_accuracy.result())]
-                bar.update(i//batch_size, values=values)
+        elif batch > self.warm_up and self.threshold >= np.finfo(np.float32).max:
+            # After warm up change threshold and growth rate values 
+            self.threshold.assign(self.threshold_value)
+            self.growth_rate.assign(self.growth_rate_value)
 
-            # End epoch 
-            self.train_acc = np.append(self.train_acc, epoch_accuracy.result())
-
-
+       
     def test(self, test_data, test_labels, batch_size=32):
         """ Tests the model with the given data.
             Input:  test_data -> tf.tensor[float32], list
@@ -273,31 +251,6 @@ class CustomModel(tf.keras.Model):
 
         score = self.model.evaluate(test_data, test_labels, batch_size=batch_size)
         self.test_acc = score[1]
-
-
-    def custom_test(self, test_data, test_labels, batch_size=32):
-        """ Tests the model when using SPL training.
-            Input:  test_data -> tf.tensor[float32], list
-                        of examples.
-                        First dimension, number of examples.
-                        Second and third dimensions, image. 
-                        Fourth dimension, color channel. 
-                    test_labels -> np.array[int], list of labels associated
-                        with the test data.
-                    batch_size -> int, number of examples used in a batch for the neural
-                        network.
-        """
-
-        test_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
-        ite = 0
-
-        for i in range(batch_size, test_data.shape[0]+batch_size-1, batch_size):
-            logits = self.model(test_data[ite:i])
-            test_accuracy(y_true=test_labels[ite:i], y_pred=logits)
-
-            ite = i
-
-        self.test_acc = test_accuracy.result()
 
 
 def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch_size=32, epochs=10):

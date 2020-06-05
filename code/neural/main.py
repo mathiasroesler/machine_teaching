@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 04/6/2020
+Date: 05/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -26,6 +26,7 @@ def main(data_name):
     exp_rate = 150
 
     # Variables for self-paced learning
+    warm_up = 5
     threshold = 0.4
     growth_rate = 1.3
 
@@ -62,7 +63,7 @@ def main(data_name):
         model = CustomModel(train_data[0].shape, max_class_nb)
         CL_model = CustomModel(train_data[0].shape, max_class_nb)
         MT_model = CustomModel(train_data[0].shape, max_class_nb)
-        SPL_model = CustomModel(train_data[0].shape, max_class_nb)
+        SPL_model = CustomModel(train_data[0].shape, max_class_nb, warm_up, threshold, growth_rate)
 
 
         ### FULL TRAIN ###
