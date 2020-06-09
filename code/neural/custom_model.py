@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 05/6/2020
+Date: 09/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -22,10 +22,11 @@ class CustomModel(tf.keras.Model):
     """ Custom neural network class. """
 
 
-    def __init__(self, data_shape, class_nb, warm_up=5, threshold_value=0.4, growth_rate_value=1.1):
+    def __init__(self, data_shape, class_nb, archi_type=1, warm_up=5, threshold_value=0.4, growth_rate_value=1.1):
         """ Initializes the model.
         Input:  data_shape -> tuple[int], shape of the input data. 
                 class_nb -> int, number of classes.
+                archi_type -> int, architecture type: 1 for LeCun, 2 for full convolution.
                 warm_up -> int, batch number after which the model is "warmed up".
                 threshold_value -> float32, initial value for SPL threshold.
                 growth_rate_value -> float32, initial value for SPL growth rate.
@@ -51,10 +52,8 @@ class CustomModel(tf.keras.Model):
         super(CustomModel, self).__init__()
 
         # Class attributes
-        self.model = tf.keras.models.Sequential() # Sequential neural network
         self.class_nb = class_nb
-        self.architecture(data_shape, archi_type=2) # Add layers to model
-        print(self.model.summary())
+        self.model = self.set_model(data_shape, archi_type=archi_type) # Add layers to model
 
         # Model attributes
         self.optimizer = tf.keras.optimizers.Adam()
@@ -69,64 +68,64 @@ class CustomModel(tf.keras.Model):
 
         # Accuracy attributes
         self.train_acc = np.array([], dtype=np.float32)
-        self.test_acc = 0.0
+        self.test_acc = np.array([], dtype=np.float32)
 
 
-    def architecture(self, input_shape, archi_type=1):
+    def set_model(self, input_shape, archi_type=1):
         """ Creates a model with a different architecture depending on the 
         type.
         Input:  input_shape -> tuple[int], shape of the input data. 
-                archi_type -> int, determines the implemented architecture.
+                archi_type -> int, architecture type: 1 for LeCun, 2 for full convolution.
         Output: model -> tf.keras.models.Sequential, structured model.
         """
 
         try:
             assert(np.issubdtype(type(archi_type), np.integer))
-            assert(archi_type >= 1)
+            assert(archi_type != 1 or archi_type != 2)
 
         except AssertionError:
-            print("Error in architecture function of CustomModel: archi_type must be an integer greater or equal to 2.")
-            exit(1)
+            print("Error in architecture function of CustomModel: archi_type must be 1 or 2") 
+            print("Defaulted value to 1")
+            archi_type = 1
 
+        model = tf.keras.models.Sequential() # Sequential neural network
 
         if archi_type == 1:
             # Add layers to model
             if (input_shape[0] == 28):
                 # Pad the input to be 32x32
-                self.model.add(ZeroPadding2D(2, input_shape=input_shape))
+                model.add(ZeroPadding2D(2, input_shape=input_shape))
                 input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
 
-            self.model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
-            self.model.add(MaxPool2D(pool_size=(2, 2)))
-            self.model.add(Conv2D(16, (5, 5), activation='relu', kernel_initializer='random_normal'))
-            self.model.add(MaxPool2D(pool_size=(2, 2)))
-            self.model.add(Flatten(data_format='channels_last'))
-            self.model.add(Dense(120, activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Dense(84, activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Dense(self.class_nb, activation='softmax', kernel_initializer='random_normal'))
+            model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
+            model.add(MaxPool2D(pool_size=(2, 2)))
+            model.add(Conv2D(16, (5, 5), activation='relu', kernel_initializer='random_normal'))
+            model.add(MaxPool2D(pool_size=(2, 2)))
+            model.add(Flatten(data_format='channels_last'))
+            model.add(Dense(120, activation='relu', kernel_initializer='random_normal'))
+            model.add(Dense(84, activation='relu', kernel_initializer='random_normal'))
+            model.add(Dense(self.class_nb, activation='softmax', kernel_initializer='random_normal'))
 
         if archi_type == 2:
             # Add layers to model
             if (input_shape[0] == 28):
                 # Pad the input to be 32x32
-                self.model.add(ZeroPadding2D(2, input_shape=input_shape))
+                model.add(ZeroPadding2D(2, input_shape=input_shape))
                 input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
 
-            self.model.add(Conv2D(96, (3, 3), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
-            self.model.add(Conv2D(96, (3, 3), activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Conv2D(96, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Conv2D(192, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Conv2D(192, (1, 1), activation='relu', kernel_initializer='random_normal'))
-            self.model.add(Conv2D(10, (1, 1), activation='relu', kernel_initializer='random_normal'))
-            self.model.add(GlobalAveragePooling2D())
-            self.model.add(Softmax()) 
+            model.add(Conv2D(96, (3, 3), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
+            model.add(Conv2D(96, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(96, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(192, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(192, (1, 1), activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(10, (1, 1), activation='relu', kernel_initializer='random_normal'))
+            model.add(GlobalAveragePooling2D())
+            model.add(Softmax()) 
 
-
-
-
+        return model
 
 
     def train(self, train_data, train_labels, epochs=10, batch_size=32):
@@ -292,7 +291,7 @@ class CustomModel(tf.keras.Model):
         """
 
         score = self.model.evaluate(test_data, test_labels, batch_size=batch_size)
-        self.test_acc = score[1]
+        self.test_acc = np.append(self.test_acc, score[1])
 
 
 def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch_size=32, epochs=10):

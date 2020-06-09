@@ -3,7 +3,7 @@
 
 """
 Plot functions for machine teaching.
-Date: 05/6/2020
+Date: 09/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -17,7 +17,8 @@ from scipy.spatial import distance
 
 
 def plot_data(full_train_score, accuracy, example_nb, missed_len):
-    """ Plots the data.
+    """ Plot accuracy as function of number of examples and number of 
+    missclassified examples as a function of iteration number.
     Input:  full_train_score -> float, accuracy for the fully trained model.
             accuracy -> np.array[float32], accuracy at each iteration for
                 the optimally trained model.
@@ -150,9 +151,8 @@ def plot_example_dist(data, labels):
     plt.show()
 
 
-def plot_comp(acc_list, plot_types, plot_labels):
-    """ Plot the comparaison between curriculum learning and machine
-    teaching accuracies.
+def plot_train_acc(acc_list, plot_types, plot_labels):
+    """ Plots the evolution of the training accuracies for each strategy.
     Input:  acc_list -> list[np.array[float32]], list of accuracies for
                 each strategy.
             plot_types -> list[str], list of plot color and type for each
@@ -166,7 +166,7 @@ def plot_comp(acc_list, plot_types, plot_labels):
         assert(len(acc_list) == len(plot_types) == len(plot_labels))
 
     except AssertionError:
-        print("Error in function plot_comp: the inputs must all have the same dimension.")
+        print("Error in function plot_train_acc: the inputs must all have the same dimension.")
         exit(1)
 
     strategy_nb = len(acc_list)
@@ -179,4 +179,26 @@ def plot_comp(acc_list, plot_types, plot_labels):
     plt.legend()
     plt.grid(True, which="both") # Add grid
     
+    plt.show()
+
+
+def plot_test_acc(acc_list, plot_labels):
+    """ Plots the comparaison of the test accuracies for each 
+    strategy using plot boxes.
+    Input:  acc_list -> list[np.array[float32]], list of accuracies for
+                each strategy.
+            plot_labels -> list[str], list of labels associated with each
+                strategy.
+    Output:
+    """
+
+    try:
+        assert(len(acc_list) == len(plot_labels))
+
+    except AssertionError:
+        print("Error in function plot_test_acc: the inputs must all have the same dimension.")
+        exit(1)
+
+    plt.boxplot(acc_list, labels=plot_labels)
+
     plt.show()
