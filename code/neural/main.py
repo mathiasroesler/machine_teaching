@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 09/6/2020
+Date: 10/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -16,8 +16,7 @@ from custom_model import *
 
 
 def main(data_name):
-    """ Main function for the mnist data and machine teaching. 
-    Using a one vs all strategy with a CNN model.
+    """ Main function. 
     Input:  data_name -> str {'mnist', 'cifar'}, name of the dataset
             to use.
     """
@@ -40,9 +39,8 @@ def main(data_name):
     plot_labels = ["MT", "CL", "SPL", "Full"]
 
     # Other variables
-    class_nb = 3
+    class_nb = -1
     iteration_nb = 1
-    loop_ite = 3
 
     # Containers for time and accuracy
     times = np.zeros(len(plot_types), dtype=np.float32)
@@ -50,6 +48,27 @@ def main(data_name):
 
     # Extract data from files
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
+
+    if class_nb != -1:
+        print("\nBinary classifaction mode")
+        train_labels = prep_data(train_labels, class_nb=class_nb)
+        test_labels = prep_data(test_labels, class_nb=class_nb)
+
+    else:
+        print("\nMulti-class classification mode")
+
+    try:
+        file_name = data_name + "_indices.npy"
+        print("Loading data from file", file_name)
+        optimal_indices = np.load(file_name)
+
+    except FileNotFoundError:
+        print("The file", file_name, "was not found.")
+        print("\nGenerating optimal set")
+        optimal_indices = create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.4, batch_size=batch_size, epochs=5)
+
+    optimal_data = tf.gather(train_data, optimal_indices)
+    optimal_labels = train_labels[optimal_indices]
 
     max_class_nb = find_class_nb(train_labels) 
     data_shape = train_data[0].shape
@@ -83,13 +102,11 @@ def main(data_name):
 
         ### MT TRAIN ###
         # Find optimal set
-        print("\nGenerating optimal set")
         tic = process_time()
-        optimal_data, optimal_labels, example_nb = create_teacher_set(train_data, train_labels, exp_rate, batch_size=batch_size, epochs=4)
 
         # Train model with teaching set
         print("\nMachine teaching training")
-        print("\nSet length: ", example_nb[-1])
+        print("\nSet length: ", len(optimal_indices))
         MT_model.train(optimal_data, optimal_labels, epochs=epochs)
 
         toc = process_time()
@@ -134,10 +151,10 @@ def main(data_name):
         times[2] += toc-tic
 
         # Reset weights of the models
-        MT_model.set_model(data_shape, archi_type)
-        CL_model.set_model(data_shape, archi_type)
-        SPL_model.set_model(data_shape, archi_type)
-        model.set_model(data_shape, archi_type)
+        MT_model.reset_model(data_shape, archi_type)
+        CL_model.reset_model(data_shape, archi_type)
+        SPL_model.reset_model(data_shape, archi_type)
+        model.reset_model(data_shape, archi_type)
 
     test_acc_list = [MT_model.test_acc, CL_model.test_acc, SPL_model.test_acc, model.test_acc]
 

@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 09/6/2020
+Date: 10/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -84,7 +84,7 @@ class CustomModel(tf.keras.Model):
             assert(archi_type != 1 or archi_type != 2)
 
         except AssertionError:
-            print("Error in architecture function of CustomModel: archi_type must be 1 or 2") 
+            print("Error in set_model function of CustomModel: archi_type must be 1 or 2") 
             print("Defaulted value to 1")
             archi_type = 1
 
@@ -127,6 +127,16 @@ class CustomModel(tf.keras.Model):
 
         return model
 
+
+    def reset_model(self, input_shape, archi_type=1):
+        """ Resets the weights of the model.
+        Input:  input_shape -> tuple[int], shape of the input data. 
+                archi_type -> int, architecture type: 1 for LeCun, 2 for full convolution.
+        Output:
+        """
+
+        self.model = set_model(input_shape, archi_type)
+    
 
     def train(self, train_data, train_labels, epochs=10, batch_size=32):
         """ Trains the model with the given inputs.
@@ -296,7 +306,8 @@ class CustomModel(tf.keras.Model):
 
 def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch_size=32, epochs=10):
     """ Produces the optimal teaching set given the train_data and a lambda coefficiant. 
-    The search stops if the accuracy of the model is greater than target_acc.
+    The search stops if the accuracy of the model is greater than target_acc. The indices
+    are saved to a file named by the user and returned as well.
     Input:  train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
@@ -310,13 +321,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
                 network.
             epochs -> int, number of epochs for the training of the neural network.
             multiclass -> bool, True if more than 2 classes.
-    Output: teaching_data -> np.array[np.array[int]], list of examples.
-                First dimension number of examples.
-                Second dimension features.
-            teaching_labels -> np.array[int], list of labels associated with the
-                teaching data.
-            teaching_set_len -> np.array[int], number of examples in teaching set at
-                each iteration.
+    Output: added_indices -> np.array[int], list of indices of selected  examples.
     """
 
     rng = default_rng() # Set seed 
@@ -384,8 +389,12 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
         ite += 1
 
     print("\nIteration number:", ite)
+    print("Select name to save data to:")
+    data_name = input().rstrip()
 
-    return teaching_data, teaching_labels, teaching_set_len
+    np.save(data_name, added_indices)
+
+    return added_indices
 
 
 def two_step_curriculum(data, labels):
