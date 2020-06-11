@@ -4,14 +4,14 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 10/6/2020
+Date: 11/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten, Softmax, GlobalAveragePooling2D
+from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten, Softmax, GlobalAveragePooling2D, Dropout
 from data_fct import prep_data
 from misc_fct import *
 from selection_fct import *
@@ -26,7 +26,7 @@ class CustomModel(tf.keras.Model):
         """ Initializes the model.
         Input:  data_shape -> tuple[int], shape of the input data. 
                 class_nb -> int, number of classes.
-                archi_type -> int, architecture type: 1 for LeCun, 2 for full convolution.
+                archi_type -> int, architecture type: 1 for LeNet5, 2 for All-CNN.
                 warm_up -> int, batch number after which the model is "warmed up".
                 threshold_value -> float32, initial value for SPL threshold.
                 growth_rate_value -> float32, initial value for SPL growth rate.
@@ -56,15 +56,23 @@ class CustomModel(tf.keras.Model):
         self.model = self.set_model(data_shape, archi_type=archi_type) # Add layers to model
 
         # Model attributes
-        self.optimizer = tf.keras.optimizers.Adam()
-        self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
+        if archi_type == 1:
+            # If the LeNet 5 architecture is used
+            self.optimizer = tf.keras.optimizers.Adam()
+            self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
 
-        # Loss attributes
+        else:
+            # If the All-CNN architecture is used
+            self.optimizer = tf.keras.optimizers.Adam(1e-5)
+            self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
+
+        # SPL loss attributes
         self.warm_up = 5
         self.threshold_value = threshold_value
         self.growth_rate_value = growth_rate_value
         self.threshold = tf.Variable(np.finfo(np.float32).max, trainable=False, dtype=tf.float32)
         self.growth_rate = tf.Variable(1, trainable=False, dtype=tf.float32)
+        self.v = tf.Variable(np.zeros(shape=(32,)), trainable=False, dtype=tf.float32)
 
         # Accuracy attributes
         self.train_acc = np.array([], dtype=np.float32)
@@ -91,7 +99,7 @@ class CustomModel(tf.keras.Model):
         model = tf.keras.models.Sequential() # Sequential neural network
 
         if archi_type == 1:
-            # Add layers to model
+            # Add layers to model LeNet5
             if (input_shape[0] == 28):
                 # Pad the input to be 32x32
                 model.add(ZeroPadding2D(2, input_shape=input_shape))
@@ -107,18 +115,21 @@ class CustomModel(tf.keras.Model):
             model.add(Dense(self.class_nb, activation='softmax', kernel_initializer='random_normal'))
 
         if archi_type == 2:
-            # Add layers to model
+            # Add layers to model All-CNN
             if (input_shape[0] == 28):
                 # Pad the input to be 32x32
                 model.add(ZeroPadding2D(2, input_shape=input_shape))
                 input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
 
+            model.add(Dropout(0.2))
             model.add(Conv2D(96, (3, 3), activation='relu', input_shape=input_shape, kernel_initializer='random_normal'))
             model.add(Conv2D(96, (3, 3), activation='relu', kernel_initializer='random_normal'))
             model.add(Conv2D(96, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
+            model.add(Dropout(0.5))
             model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
             model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
             model.add(Conv2D(192, (3, 3), 2, activation='relu', kernel_initializer='random_normal'))
+            model.add(Dropout(0.5))
             model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
             model.add(Conv2D(192, (1, 1), activation='relu', kernel_initializer='random_normal'))
             model.add(Conv2D(10, (1, 1), activation='relu', kernel_initializer='random_normal'))
@@ -135,7 +146,7 @@ class CustomModel(tf.keras.Model):
         Output:
         """
 
-        self.model = set_model(input_shape, archi_type)
+        self.model = self.set_model(input_shape, archi_type)
     
 
     def train(self, train_data, train_labels, epochs=10, batch_size=32):
@@ -231,7 +242,7 @@ class CustomModel(tf.keras.Model):
             exit(1)
 
         # Compile model
-        self.model.compile(loss=self.loss,
+        self.model.compile(loss=self.SPL_loss,
                     optimizer=self.optimizer,
                     metrics=['accuracy']
                     )
@@ -250,7 +261,7 @@ class CustomModel(tf.keras.Model):
         self.train_acc = np.array(hist.history.get('accuracy'))
         
 
-    def loss(self, labels, predicted_labels):
+    def SPL_loss(self, labels, predicted_labels):
         """ Calculates the loss for SPL training given the data and the labels.
         Input:  labels -> np.array[int], list of labels associated
                     with the data.
@@ -262,7 +273,7 @@ class CustomModel(tf.keras.Model):
         loss_object = tf.keras.losses.SparseCategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
         loss_value = loss_object(y_true=labels, y_pred=predicted_labels) # Estimate loss
-        v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold
+        self.v.assign(tf.cast(loss_value < self.threshold, dtype=tf.float32)) # Find examples with a smaller loss then the threshold
         self.threshold.assign(self.threshold*self.growth_rate) # Update the threshold
         return tf.reduce_mean(v*loss_value) 
 
@@ -281,7 +292,7 @@ class CustomModel(tf.keras.Model):
             self.threshold.assign(self.threshold_value)
             self.growth_rate.assign(self.growth_rate_value)
 
-        elif batch > self.warm_up and self.threshold >= np.finfo(np.float32).max:
+        elif batch == self.warm_up and self.threshold.numpy() >= np.finfo(np.float32).max:
             # After warm up change threshold and growth rate values 
             self.threshold.assign(self.threshold_value)
             self.growth_rate.assign(self.growth_rate_value)
