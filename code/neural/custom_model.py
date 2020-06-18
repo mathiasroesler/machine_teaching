@@ -394,7 +394,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
     added_indices = np.concatenate([added_indices, init_indices], axis=0)
 
     # Initialize the model
-    model.train(teaching_data, teaching_labels, epochs=epochs, batch_size=2)
+    model.train(teaching_data, teaching_labels, "Full",  epochs=epochs, batch_size=2)
 
     while len(teaching_data) != len(train_data):
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
@@ -427,7 +427,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
             teaching_labels = tf.concat([teaching_labels, labels], axis=0)
             teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
 
-        model.train(data, labels, batch_size=batch_size, epochs=epochs) 
+        model.train(data, labels, "Full",  batch_size=batch_size, epochs=epochs) 
         accuracy = model.train_acc[-1]
 
         ite += 1
