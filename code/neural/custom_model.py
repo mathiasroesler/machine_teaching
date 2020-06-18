@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 11/6/2020
+Date: 18/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -72,7 +72,6 @@ class CustomModel(tf.keras.Model):
         self.growth_rate_value = growth_rate_value
         self.threshold = tf.Variable(np.finfo(np.float32).max, trainable=False, dtype=tf.float32)
         self.growth_rate = tf.Variable(1, trainable=False, dtype=tf.float32)
-        self.v = tf.Variable(np.zeros(shape=(32,)), trainable=False, dtype=tf.float32)
 
         # Accuracy attributes
         self.train_acc = np.array([], dtype=np.float32)
@@ -149,7 +148,43 @@ class CustomModel(tf.keras.Model):
         self.model = self.set_model(input_shape, archi_type)
     
 
-    def train(self, train_data, train_labels, epochs=10, batch_size=32):
+    def train(self, train_data, train_labels, strategy, epochs=10, batch_size=32):
+        """ Calls the training function depending on the strategy.
+        Input:  train_data -> tf.tensor[float32], list of examples. 
+                    First dimension, number of examples.
+                    Second and third dimensions, image. 
+                    Fourth dimension, color channel. 
+                train_labels -> np.array[int], list of labels associated
+                    with the train data.
+                strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
+                batch_size -> int, number of examples used in a batch for the neural
+                    network.
+                epochs -> int, number of epochs for the training of the neural network.
+        Output:
+        """    
+
+        try:
+            assert(isinstance(strategy, str))
+            assert(strategy == "MT" or strategy == "CL" or strategy == "Full" or strategy == "SPL")
+
+        except AssertionError:
+            print("Error in function train of CustomModel: the strategy must be a string, either Full, MT, CL or SPL")
+            exit(1)
+
+        # Reset training accuracy
+        self.train_acc = np.array([], dtype=np.float32)
+
+        if strategy == "MT" or strategy == "Full":
+            self.simple_train(train_data, train_labels, epochs, batch_size)
+
+        elif strategy == "CL":
+            self.CL_train(train_data, train_labels, epochs, batch_size)
+
+        elif strategy == "SPL":
+            self.SPL_train(train_data, train_labels, epochs, batch_size)
+
+
+    def simple_train(self, train_data, train_labels, epochs=10, batch_size=32):
         """ Trains the model with the given inputs.
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
@@ -168,7 +203,7 @@ class CustomModel(tf.keras.Model):
             assert(np.issubdtype(type(epochs), np.integer))
 
         except AssertionError:
-            print("Error in function train of CustomModel: the number of epochs must be an integer greater than 1")
+            print("Error in function simple_train of CustomModel: the number of epochs must be an integer greater than 1")
             exit(1)
 
 
@@ -273,8 +308,7 @@ class CustomModel(tf.keras.Model):
         loss_object = tf.keras.losses.SparseCategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
         loss_value = loss_object(y_true=labels, y_pred=predicted_labels) # Estimate loss
-        self.v.assign(tf.cast(loss_value < self.threshold, dtype=tf.float32)) # Find examples with a smaller loss then the threshold
-        self.threshold.assign(self.threshold*self.growth_rate) # Update the threshold
+        v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold
         return tf.reduce_mean(v*loss_value) 
 
     
@@ -288,9 +322,8 @@ class CustomModel(tf.keras.Model):
         """
 
         if reset == True:
-            # At the end of each epoch reset values
-            self.threshold.assign(self.threshold_value)
-            self.growth_rate.assign(self.growth_rate_value)
+            # At the end of each epoch update threshold
+            self.threshold.assign(self.threshold*self.growth_rate) # Update the threshold
 
         elif batch == self.warm_up and self.threshold.numpy() >= np.finfo(np.float32).max:
             # After warm up change threshold and growth rate values 

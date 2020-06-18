@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 10/6/2020
+Date: 18/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -25,26 +25,27 @@ def main(data_name):
     exp_rate = 150
 
     # Variables for self-paced learning
-    warm_up = 5
-    threshold = 0.4
+    warm_up = 10 
+    threshold = 0.6
     growth_rate = 1.3
 
     # Variables for neural networks
     archi_type = 1
-    epochs = 2 
-    batch_size = 32
+    epochs = 2
+    batch_size = 128
 
     # Variables for plotting
     plot_types = ['ro-', 'bo-', 'go-', 'ko-']
-    plot_labels = ["MT", "CL", "SPL", "Full"]
 
     # Other variables
+    strat_names = ["Full", "MT", "CL", "SPL"]
     class_nb = -1
-    iteration_nb = 1
+    iteration_nb = 2
 
-    # Containers for time and accuracy
-    times = np.zeros(len(plot_types), dtype=np.float32)
-    train_acc_list = [0] * len(plot_types)
+    # Dictionnaries for time and accuracy
+    times = dict()
+    train_acc_dict = dict()
+    test_acc_dict = dict()
 
     # Extract data from files
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
@@ -74,105 +75,54 @@ def main(data_name):
     data_shape = train_data[0].shape
 
     # Declare models
-    model = CustomModel(data_shape, max_class_nb, archi_type)
-    CL_model = CustomModel(data_shape, max_class_nb, archi_type)
-    MT_model = CustomModel(data_shape, max_class_nb, archi_type)
-    SPL_model = CustomModel(data_shape, max_class_nb, archi_type, warm_up, threshold, growth_rate)
+    models = dict()
+
+    for strat in strat_names:
+        times[strat] = 0
+        train_acc_dict[strat] = [0]
+        models[strat] = CustomModel(data_shape, max_class_nb, archi_type, warm_up, threshold, growth_rate)
 
     for i in range(iteration_nb):
         print("\nITERATION", i+1)
 
-        ### FULL TRAIN ###
-        # Train model with the all the examples
-        print("\nFull training")
-        print("\nSet length:", len(train_data))
-        tic = process_time()
+        for strat in strat_names:
+            # For each strategy 
+            model = models.get(strat)
+            tic = process_time()
 
-        model.train(train_data, train_labels, epochs)
+            # Train model
+            print("\n"+ strat+" training")
 
-        toc = process_time()
+            if strat == "MT":
+                model.train(optimal_data, optimal_labels, strat, epochs, batch_size)
 
-        # Test model
-        model.test(test_data, test_labels)
+            else:
+                model.train(train_data, train_labels, strat, epochs, batch_size)
 
-        # Add full training time and accuracy
-        train_acc_list[3] += model.train_acc
-        times[3] += toc-tic
+            toc = process_time()
 
+            # Test model
+            model.test(test_data, test_labels)
 
-        ### MT TRAIN ###
-        # Find optimal set
-        tic = process_time()
-
-        # Train model with teaching set
-        print("\nMachine teaching training")
-        print("\nSet length: ", len(optimal_indices))
-        MT_model.train(optimal_data, optimal_labels, epochs=epochs)
-
-        toc = process_time()
-
-        # Test model
-        MT_model.test(test_data, test_labels)
-
-        # Add machine teaching time
-        train_acc_list[0] += MT_model.train_acc
-        times[0] += toc-tic
-
-
-        ### CURRICULUM TRAIN ###
-        # Train model with curriculum
-        print("\nCurriculum training")
-        tic = process_time()
-        
-        CL_model.CL_train(train_data, train_labels, epochs=epochs)
-
-        toc = process_time()
-
-        CL_model.test(test_data, test_labels)
-
-        # Add curriculum time
-        train_acc_list[1] += CL_model.train_acc
-        times[1] += toc-tic
-
-        ### SP TRAIN ###
-        # Train model with SP
-        tic = process_time()
-
-        print("\nSelf-paced training")
-
-        SPL_model.SPL_train(train_data, train_labels, epochs=epochs)
-
-        toc = process_time()
-
-        SPL_model.test(test_data, test_labels)
-        
-        # Add SPC time
-        train_acc_list[2] += SPL_model.train_acc
-        times[2] += toc-tic
-
-        # Reset weights of the models
-        MT_model.reset_model(data_shape, archi_type)
-        CL_model.reset_model(data_shape, archi_type)
-        SPL_model.reset_model(data_shape, archi_type)
-        model.reset_model(data_shape, archi_type)
-
-    test_acc_list = [MT_model.test_acc, CL_model.test_acc, SPL_model.test_acc, model.test_acc]
+            # Save train accuracy and time
+            train_acc_dict.update({strat: train_acc_dict.get(strat) + model.train_acc})
+            times.update({strat: times.get(strat) + toc-tic})
 
     # Average time and accuracies
-    times = times/iteration_nb
+    for strat in strat_names:
+        times.update({strat: times.get(strat)/iteration_nb})
+        train_acc_dict.update({strat: train_acc_dict.get(strat)/iteration_nb})
+        test_acc_dict[strat] = models.get(strat).test_acc
 
-    for k in range(len(train_acc_list)):
-        train_acc_list[k] = train_acc_list[k]/iteration_nb
+    plot_train_acc(train_acc_dict, plot_types)
+    plot_test_acc(test_acc_dict)
 
-    display(test_acc_list, plot_labels, times)
-    plot_train_acc(train_acc_list, plot_types, plot_labels)
-    plot_test_acc(test_acc_list, plot_labels)
     
 print("Select cifar or mnist:")
 data_name = input().rstrip()
 
 while data_name != "cifar" and data_name != "mnist":
-    print("Select cifar or mnsit:")
+    print("Select cifar or mnist:")
     data_name = input().rstrip()
 
 main(data_name)
