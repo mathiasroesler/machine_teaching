@@ -3,12 +3,12 @@
 
 """
 Main program for machine teaching.
-Date: 18/6/2020
+Date: 23/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
-from time import process_time
+import time
 from data_fct import *
 from misc_fct import *
 from plot_fct import *
@@ -88,7 +88,7 @@ def main(data_name):
         for strat in strat_names:
             # For each strategy 
             model = models.get(strat)
-            tic = process_time()
+            tic = time.time()
 
             # Train model
             print("\n"+ strat+" training")
@@ -99,7 +99,7 @@ def main(data_name):
             else:
                 model.train(train_data, train_labels, strat, epochs, batch_size)
 
-            toc = process_time()
+            toc = time.time()
 
             # Test model
             model.test(test_data, test_labels)
