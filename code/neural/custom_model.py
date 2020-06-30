@@ -183,9 +183,9 @@ class CustomModel(tf.keras.Model):
                 train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
                 strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
+                epochs -> int, number of epochs for the training of the neural network.
                 batch_size -> int, number of examples used in a batch for the neural
                     network.
-                epochs -> int, number of epochs for the training of the neural network.
         Output:
         """    
 
@@ -390,7 +390,6 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
             batch_size -> int, number of examples used in a batch for the neural
                 network.
             epochs -> int, number of epochs for the training of the neural network.
-            multiclass -> bool, True if more than 2 classes.
     Output: added_indices -> np.array[int], list of indices of selected  examples.
     """
 
@@ -420,7 +419,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
     added_indices = np.concatenate([added_indices, init_indices], axis=0)
 
     # Initialize the model
-    model.train(teaching_data, teaching_labels, "Full",  epochs=epochs, batch_size=2)
+    model.train(teaching_data, teaching_labels, "Full", epochs=epochs, batch_size=2)
 
     while len(teaching_data) != len(train_data):
         # Exit if all of the examples are in the teaching set or enough examples in the teaching set
@@ -453,7 +452,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
             teaching_labels = tf.concat([teaching_labels, labels], axis=0)
             teaching_set_len = np.concatenate((teaching_set_len, [len(teaching_data)]), axis=0)
 
-        model.train(data, labels, "Full",  batch_size=batch_size, epochs=epochs) 
+        model.train(data, labels, "Full", batch_size=batch_size, epochs=epochs) 
         accuracy = model.train_acc[-1]
 
         ite += 1

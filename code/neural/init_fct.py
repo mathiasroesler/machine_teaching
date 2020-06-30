@@ -2,74 +2,16 @@
 # -*- coding: utf-8 -*-
 
 """
-Contains the functions for the initialization of the teacher.
-Date: 25/5/2020
+Contains the initializations functions for the teacher model.
+Date: 30/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten
 from numpy.random import default_rng 
 from misc_fct import *
-
-
-def model_init(data_shape, max_class_nb, threshold=np.finfo(np.float32).max, growth_factor=1.0):
-    """ Initializes the model.
-    Input:  data_shape -> tuple[int], shape of the input data. 
-            max_class_nb -> int, number of classes.
-            threshold -> float, value below which SPL
-                examples will be used for backpropagation.
-            growth_factor -> float, multiplicative value to 
-                increase the threshold.
-    Output: model -> CNN model
-    """
-
-    try:
-        assert(np.issubdtype(type(max_class_nb), np.integer))
-        assert(max_class_nb > 1)
-
-    except AssertionError:
-        print("Error in function model_init: max_class_nb must be an integer greater or equal to 2.")
-        exit(1)
-
-    try:
-        assert(len(data_shape) == 3)
-        assert(data_shape[0] == data_shape[1])
-        input_shape = data_shape
-
-    except AssertionError:
-        print("Error in function model_init: data_shape must have 3 elements with the two first ones equal.")
-        exit(1)
-
-    model = tf.keras.models.Sequential() # Sequential neural network
-
-    # Add layers to model
-    if (data_shape[0] == 28):
-        # Pad the input to be 32x32
-        model.add(ZeroPadding2D(2, input_shape=input_shape))
-        input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
-
-    model.add(Conv2D(6, (5, 5), activation='relu', input_shape=input_shape))
-    model.add(MaxPool2D(pool_size=(2, 2)))
-    model.add(Conv2D(16, (5, 5), activation='relu'))
-    model.add(MaxPool2D(pool_size=(2, 2)))
-    model.add(Flatten(data_format='channels_last'))
-    model.add(Dense(120, activation='relu'))
-    model.add(Dense(84, activation='relu'))
-    model.add(Dense(max_class_nb, activation='softmax'))
-
-    # Create a custom loss object
-    custom_loss = SPLLoss(threshold, growth_factor)
-
-    # Compile model
-    model.compile(loss=custom_loss.loss,
-                optimizer=tf.keras.optimizers.Adam(),
-                metrics=['accuracy']
-                )
-
-    return model
 
 
 def rndm_init(labels):

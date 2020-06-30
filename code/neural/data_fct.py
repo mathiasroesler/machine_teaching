@@ -11,7 +11,6 @@ Mail: roesler.mathias@cmi-figure.fr
 import numpy as np
 import tensorflow as tf
 from numpy.random import default_rng 
-from numpy.linalg import norm
 
 
 def extract_data(data_name):
@@ -60,7 +59,7 @@ def extract_data(data_name):
     #return tf.cast(train_data, dtype=tf.float32), tf.cast(test_data, dtype=tf.float32), train_labels, test_labels
 
 
-def prep_data(labels, class_nb=0):
+def prep_labels(labels, class_nb=0):
     """ Prepares the labels for a one vs all strategy given a class.
     The first class must be 0.
     Input:  labels -> np.array[int], list of labels.
@@ -75,7 +74,7 @@ def prep_data(labels, class_nb=0):
         assert(np.max(labels) > class_nb)
 
     except AssertionError:
-        print("Error in function prep_data: class_nb must be a positive integer less then the number of classes.")
+        print("Error in function prep_labels: class_nb must be a positive integer less then the number of classes.")
         exit(1)
 
     # Convert to two labels given the class number
@@ -83,3 +82,48 @@ def prep_data(labels, class_nb=0):
     labels[labels == class_nb] = 1
 
     return labels
+
+
+def split_data(train_data, train_labels):
+    """ Divides the train data into a validation set and 
+    a train set. 
+    Input:  train_data -> tf.tensor[float32], list
+                of examples. 
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+            train_labels -> tf.tensor[int], one hot labels
+                associated with the train data.
+    Output: reduced_train_data -> tf.tensor[float32], list
+                of examples. 
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+            reduced_train_labels -> tf.tensor[int], one hot labels
+                associated with the train data.
+            val_data -> tf.tensor[float32], list
+                of examples. 
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+            val_labels -> tf.tensor[int], one hot labels
+                associated with the validation data.
+    """
+
+    rng = default_rng(120) # Set seed 
+    example_nb = train_labels.shape[0]
+
+    val_indices = rng.choice(example_nb, example_nb//10, replace=False)
+    train_indices = np.delete(np.arange(example_nb), val_indices)
+
+    # Create validation set
+    val_data = tf.gather(train_data, val_indices)
+    val_labels = tf.gather(train_labels, val_indices)
+
+    # Create a reduced train set 
+    reduced_train_data = tf.gather(train_data, train_indices)
+    reduced_train_labels = tf.gather(train_labels, train_indices)
+
+    breakpoint()
+
+    return reduced_train_data, reduced_train_labels, val_data, val_labels
