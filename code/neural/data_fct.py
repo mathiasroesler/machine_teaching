@@ -3,7 +3,7 @@
 
 """
 Contains the functions to manipulate the data.
-Date: 25/5/2020
+Date: 30/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -78,7 +78,7 @@ def prep_data(labels, class_nb=0):
         print("Error in function prep_data: class_nb must be a positive integer less then the number of classes.")
         exit(1)
 
-    # Convert to two labels to two classes given the class number
+    # Convert to two labels given the class number
     labels[labels != class_nb] = 0
     labels[labels == class_nb] = 1
 

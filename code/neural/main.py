@@ -3,7 +3,7 @@
 
 """
 Main program for machine teaching.
-Date: 23/6/2020
+Date: 30/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -40,7 +40,7 @@ def main(data_name):
     # Other variables
     strat_names = ["Full", "MT", "CL", "SPL"]
     class_nb = -1
-    iteration_nb = 2
+    iteration_nb = 1
 
     # Dictionnaries for time and accuracy
     times = dict()
@@ -52,11 +52,13 @@ def main(data_name):
 
     if class_nb != -1:
         print("\nBinary classifaction mode")
-        train_labels = prep_data(train_labels, class_nb=class_nb)
-        test_labels = prep_data(test_labels, class_nb=class_nb)
+        train_labels = tf.one_hot(prep_data(train_labels, class_nb=class_nb), 2)
+        test_labels = tf.one_hot(prep_data(test_labels, class_nb=class_nb), 2)
 
     else:
         print("\nMulti-class classification mode")
+        train_labels = tf.one_hot(train_labels, 10)
+        test_labels = tf.one_hot(test_labels, 10)
 
     try:
         file_name = data_name + "_indices.npy"
@@ -69,7 +71,7 @@ def main(data_name):
         optimal_indices = create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.4, batch_size=batch_size, epochs=5)
 
     optimal_data = tf.gather(train_data, optimal_indices)
-    optimal_labels = train_labels[optimal_indices]
+    optimal_labels = tf.gather(train_labels, optimal_indices)
 
     max_class_nb = find_class_nb(train_labels) 
     data_shape = train_data[0].shape

@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 18/6/2020
+Date: 30/6/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -57,14 +57,19 @@ class CustomModel(tf.keras.Model):
 
         # Model attributes
         if archi_type == 1:
-            # If the LeNet 5 architecture is used
+            # If the LeNet5 architecture is used
             self.optimizer = tf.keras.optimizers.Adam()
-            self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
+            self.loss_function = tf.keras.losses.CategoricalCrossentropy()
 
-        else:
+        if archi_type == 2:
             # If the All-CNN architecture is used
             self.optimizer = tf.keras.optimizers.Adam(1e-5)
-            self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
+            self.loss_function = tf.keras.losses.CategoricalCrossentropy()
+
+        if archi_type == 3:
+            # If the CNN architecture is used
+            self.optimizer = tf.keras.optimizers.Adadelta()
+            self.loss_function = tf.keras.losses.CategoricalCrossentropy()
 
         # SPL loss attributes
         self.warm_up = 5
@@ -82,16 +87,16 @@ class CustomModel(tf.keras.Model):
         """ Creates a model with a different architecture depending on the 
         type.
         Input:  input_shape -> tuple[int], shape of the input data. 
-                archi_type -> int, architecture type: 1 for LeCun, 2 for full convolution.
+                archi_type -> int, architecture type: 1 for LeNet5, 2 for All-CNN, 3 for CNN.
         Output: model -> tf.keras.models.Sequential, structured model.
         """
 
         try:
             assert(np.issubdtype(type(archi_type), np.integer))
-            assert(archi_type != 1 or archi_type != 2)
+            assert(archi_type != 1 or archi_type != 2 or archi_type != 3)
 
         except AssertionError:
-            print("Error in set_model function of CustomModel: archi_type must be 1 or 2") 
+            print("Error in set_model function of CustomModel: archi_type must be 1, 2 or 3") 
             print("Defaulted value to 1")
             archi_type = 1
 
@@ -135,6 +140,27 @@ class CustomModel(tf.keras.Model):
             model.add(GlobalAveragePooling2D())
             model.add(Softmax()) 
 
+        if archi_type == 3:
+            # Add layers to model CNN
+            if (input_shape[0] == 28):
+                # Pad the input to be 32x32
+                model.add(ZeroPadding2D(2, input_shape=input_shape))
+                input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
+
+            model.add(Conv2D(filters=16, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=input_shape))
+            model.add(Conv2D(filters=32, kernel_size=3, strides=1, padding='same', activation='relu'))
+            model.add(MaxPool2D(pool_size=2))
+            model.add(Conv2D(filters=64, kernel_size=4, strides=1, padding='same', activation='relu'))
+            model.add(MaxPool2D(pool_size=2))
+            model.add(Conv2D(filters=128, kernel_size=4, strides=1, padding='same', activation='relu'))
+            model.add(MaxPool2D(pool_size=2))
+            model.add(Dropout(0.2))
+            model.add(Flatten())
+            model.add(Dropout(0.2))
+            model.add(Dense(512, activation='relu'))
+            model.add(Dropout(0.2))
+            model.add(Dense(10, activation='softmax'))
+
         return model
 
 
@@ -154,7 +180,7 @@ class CustomModel(tf.keras.Model):
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> np.array[int], list of labels associated
+                train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
                 strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
                 batch_size -> int, number of examples used in a batch for the neural
@@ -190,7 +216,7 @@ class CustomModel(tf.keras.Model):
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> np.array[int], list of labels associated
+                train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
                 batch_size -> int, number of examples used in a batch for the neural
                     network.
@@ -224,7 +250,7 @@ class CustomModel(tf.keras.Model):
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> np.array[int], list of labels associated
+                train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
                 batch_size -> int, number of examples used in a batch for the neural
                     network.
@@ -260,7 +286,7 @@ class CustomModel(tf.keras.Model):
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> np.array[int], list of labels associated
+                train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
                 batch_size -> int, number of examples used in a batch for the neural
                     network.
@@ -298,14 +324,14 @@ class CustomModel(tf.keras.Model):
 
     def SPL_loss(self, labels, predicted_labels):
         """ Calculates the loss for SPL training given the data and the labels.
-        Input:  labels -> np.array[int], list of labels associated
+        Input:  labels -> tf.tensor[int], list of one hot labels associated
                     with the data.
-                predicted_labels -> np.array[int], list of labels estimated
+                predicted_labels -> tf.tensor[int], list of one hot labels estimated
                     by the model.
         Output: loss_value -> tf.tensor[float32], calculated loss.
         """
 
-        loss_object = tf.keras.losses.SparseCategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
+        loss_object = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
         loss_value = loss_object(y_true=labels, y_pred=predicted_labels) # Estimate loss
         v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold
@@ -338,7 +364,7 @@ class CustomModel(tf.keras.Model):
                         First dimension, number of examples.
                         Second and third dimensions, image. 
                         Fourth dimension, color channel. 
-                    test_labels -> np.array[int], list of labels associated
+                    test_labels -> tf.tensor[int], list of one hot labels associated
                         with the test data.
                     batch_size -> int, number of examples used in a batch for the neural
                         network.
@@ -356,7 +382,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            train_labels -> np.array[int], list of labels associated
+            train_labels -> tf.tensor[int], list of one hot labels associated
                 with the train data.
             exp_rate -> int, coefficiant for the exponential distribution
                 for the thresholds.
@@ -448,7 +474,7 @@ def two_step_curriculum(data, labels):
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            labels -> np.array[int], list of labels 
+            labels -> tf.tensor[int], list of one hot labels 
                 associated with the data.
     Output: curriculum_indices -> list[np.array[int]], list of indices 
                 sorted from easy to hard.
