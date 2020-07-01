@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 30/6/2020
+Date: 01/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -12,7 +12,7 @@ Mail: roesler.mathias@cmi-figure.fr
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, MaxPool2D, Conv2D, ZeroPadding2D, Flatten, Softmax, GlobalAveragePooling2D, Dropout
-from data_fct import prep_data
+from data_fct import prep_labels
 from misc_fct import *
 from selection_fct import *
 from init_fct import *
@@ -81,6 +81,11 @@ class CustomModel(tf.keras.Model):
         # Accuracy attributes
         self.train_acc = np.array([], dtype=np.float32)
         self.test_acc = np.array([], dtype=np.float32)
+        self.val_acc = np.array([], dtype=np.float32)
+        
+        # Loss attributes
+        self.train_loss = np.array([], dtype=np.float32)
+        self.val_loss = np.array([], dtype=np.float32)
 
 
     def set_model(self, input_shape, archi_type=1):
@@ -174,7 +179,7 @@ class CustomModel(tf.keras.Model):
         self.model = self.set_model(input_shape, archi_type)
     
 
-    def train(self, train_data, train_labels, strategy, epochs=10, batch_size=32):
+    def train(self, train_data, train_labels, val_set, strategy, epochs=10, batch_size=32):
         """ Calls the training function depending on the strategy.
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
@@ -182,6 +187,9 @@ class CustomModel(tf.keras.Model):
                     Fourth dimension, color channel. 
                 train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                    First dimension, examples.
+                    Second dimension, one hot labels.
                 strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
                 epochs -> int, number of epochs for the training of the neural network.
                 batch_size -> int, number of examples used in a batch for the neural
@@ -197,20 +205,23 @@ class CustomModel(tf.keras.Model):
             print("Error in function train of CustomModel: the strategy must be a string, either Full, MT, CL or SPL")
             exit(1)
 
-        # Reset training accuracy
+        # Reset accuracies and losses
         self.train_acc = np.array([], dtype=np.float32)
+        self.val_acc = np.array([], dtype=np.float32)
+        self.train_loss = np.array([], dtype=np.float32)
+        self.val_loss = np.array([], dtype=np.float32)
 
         if strategy == "MT" or strategy == "Full":
-            self.simple_train(train_data, train_labels, epochs, batch_size)
+            self.simple_train(train_data, train_labels, val_set, epochs, batch_size)
 
         elif strategy == "CL":
-            self.CL_train(train_data, train_labels, epochs, batch_size)
+            self.CL_train(train_data, train_labels, val_set, epochs, batch_size)
 
         elif strategy == "SPL":
-            self.SPL_train(train_data, train_labels, epochs, batch_size)
+            self.SPL_train(train_data, train_labels, val_set, epochs, batch_size)
 
 
-    def simple_train(self, train_data, train_labels, epochs=10, batch_size=32):
+    def simple_train(self, train_data, train_labels, val_set, epochs=10, batch_size=32):
         """ Trains the model with the given inputs.
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
@@ -218,9 +229,12 @@ class CustomModel(tf.keras.Model):
                     Fourth dimension, color channel. 
                 train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                    First dimension, examples.
+                    Second dimension, one hot labels.
+                epochs -> int, number of epochs for the training of the neural network.
                 batch_size -> int, number of examples used in a batch for the neural
                     network.
-                epochs -> int, number of epochs for the training of the neural network.
         Output:
         """    
 
@@ -239,12 +253,16 @@ class CustomModel(tf.keras.Model):
                     metrics=['accuracy']
                     )
         
-        hist = self.model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs)
+        hist = self.model.fit(train_data, train_labels, validation_data=val_set, batch_size=batch_size, epochs=epochs)
     
+        # Save accuracies and losses
         self.train_acc = np.array(hist.history.get('accuracy'))
+        self.train_loss = np.array(hist.history.get('loss'))
+        self.val_acc = np.array(hist.history.get('val_accuracy'))
+        self.val_loss = np.array(hist.history.get('val_loss'))
 
 
-    def CL_train(self, train_data, train_labels, epochs=10, batch_size=32):
+    def CL_train(self, train_data, train_labels, val_set, epochs=10, batch_size=32):
         """ Trains the model using a curriculum and the given data.
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
@@ -252,9 +270,12 @@ class CustomModel(tf.keras.Model):
                     Fourth dimension, color channel. 
                 train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                    First dimension, examples.
+                    Second dimension, one hot labels.
+                epochs -> int, number of epochs for the training of the neural network.
                 batch_size -> int, number of examples used in a batch for the neural
                     network.
-                epochs -> int, number of epochs for the training of the neural network.
         Output:
         """    
 
@@ -276,11 +297,16 @@ class CustomModel(tf.keras.Model):
 
         # Train model with easy then hard examples
         for i in range(len(curriculum_indices)):
-            hist = self.model.fit(tf.gather(train_data, curriculum_indices[i]), tf.gather(train_labels, curriculum_indices[i]), batch_size=batch_size, epochs=epochs//2)
+            hist = self.model.fit(tf.gather(train_data, curriculum_indices[i]), tf.gather(train_labels, curriculum_indices[i]), validation_data=val_set, batch_size=batch_size, epochs=epochs//2)
+
+            # Save accuracies and losses
             self.train_acc = np.concatenate((self.train_acc, hist.history.get('accuracy')), axis=0) 
+            self.train_loss = np.concatenate((self.train_loss, hist.history.get('loss')), axis=0)
+            self.val_acc = np.concatenate((self.val_acc, hist.history.get('val_accuracy')), axis=0)
+            self.val_loss = np.concatenate((self.val_loss, hist.history.get('val_loss')), axis=0)
 
 
-    def SPL_train(self, train_data, train_labels, epochs=10, batch_size=32):
+    def SPL_train(self, train_data, train_labels, val_set, epochs=10, batch_size=32):
         """ Trains the model using self-paced training and the given inputs. 
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
@@ -288,9 +314,12 @@ class CustomModel(tf.keras.Model):
                     Fourth dimension, color channel. 
                 train_labels -> tf.tensor[int], list of one hot labels associated
                     with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                    First dimension, examples.
+                    Second dimension, one hot labels.
+                epochs -> int, number of epochs for the training of the neural network.
                 batch_size -> int, number of examples used in a batch for the neural
                     network.
-                epochs -> int, number of epochs for the training of the neural network.
         Output:
         """    
 
@@ -316,10 +345,14 @@ class CustomModel(tf.keras.Model):
                 on_epoch_end=lambda epoch, logs: self.assign(epoch, reset=True)
                 )
 
-        hist = self.model.fit(train_data, train_labels, batch_size=batch_size, epochs=epochs,
+        hist = self.model.fit(train_data, train_labels, validation_data=val_set, batch_size=batch_size, epochs=epochs,
                 callbacks=[batch_callback, epoch_callback])
     
+        # Save accuracies and losses
         self.train_acc = np.array(hist.history.get('accuracy'))
+        self.train_loss = np.array(hist.history.get('loss'))
+        self.val_acc = np.array(hist.history.get('val_accuracy'))
+        self.val_loss = np.array(hist.history.get('val_loss'))
         
 
     def SPL_loss(self, labels, predicted_labels):
@@ -407,7 +440,6 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
     added_indices = np.array([], dtype=np.intc) # List to keep track of indices of examples already added 
 
     # Initial example indices
-    #init_indices = rndm_init(train_labels)
     init_indices = nearest_avg_init(train_data, train_labels)
 
     # Declare model
@@ -435,8 +467,6 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
 
         # Find indices of examples that could be added
         new_indices = select_examples(missed_indices, thresholds, weights)
-        #new_indices = select_rndm_examples(missed_indices, 200)
-        #new_indices = select_min_avg_dist(missed_indices, 200, train_data, train_labels, positive_average, negative_average)
 
         # Find the indices of the examples already present and remove them from the new ones
         new_indices = np.setdiff1d(new_indices, added_indices)

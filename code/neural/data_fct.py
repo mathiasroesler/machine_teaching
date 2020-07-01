@@ -3,7 +3,7 @@
 
 """
 Contains the functions to manipulate the data.
-Date: 30/6/2020
+Date: 01/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -84,46 +84,49 @@ def prep_labels(labels, class_nb=0):
     return labels
 
 
-def split_data(train_data, train_labels):
-    """ Divides the train data into a validation set and 
-    a train set. 
-    Input:  train_data -> tf.tensor[float32], list
+def split_data(train_set, optimal_indices):
+    """ Divides the train set into a validation set and a train set. 
+    The validation set is composed of a tenth of the train set, the
+    examples are chosen so that they are not in the optimal set. The
+    validation set can be used for both sets.
+    Input:  train_set -> tuple(tf.tensor[float32], tf.tensor[int]),
+                train data and labels.
+                First dimension, examples.
+                Second dimension, labels.
+            optimal_indices -> np.array[int], list of the indices of
+                the optimal examples in the train set.
+    Output: reduced_set -> tuple(tf.tensor[float32], tf.tensor[int]),
+                train data and labels.    
                 of examples. 
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            train_labels -> tf.tensor[int], one hot labels
-                associated with the train data.
-    Output: reduced_train_data -> tf.tensor[float32], list
-                of examples. 
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            reduced_train_labels -> tf.tensor[int], one hot labels
-                associated with the train data.
-            val_data -> tf.tensor[float32], list
-                of examples. 
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-            val_labels -> tf.tensor[int], one hot labels
-                associated with the validation data.
+                First dimension, examples.
+                Second dimension, labels
+            optimal_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation
+                data and labels.
+                First dimension, examples.
+                Second dimension, labels.
+            val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation
+                data and labels.
+                First dimension, examples.
+                Second dimension, labels.
     """
 
     rng = default_rng(120) # Set seed 
-    example_nb = train_labels.shape[0]
+    example_nb = train_set[1].shape[0]
 
-    val_indices = rng.choice(example_nb, example_nb//10, replace=False)
+    possible_indices = np.delete(np.arange(example_nb), optimal_indices)
+    val_indices = rng.choice(possible_indices, example_nb//10, replace=False)
     train_indices = np.delete(np.arange(example_nb), val_indices)
 
     # Create validation set
-    val_data = tf.gather(train_data, val_indices)
-    val_labels = tf.gather(train_labels, val_indices)
+    val_data = tf.gather(train_set[0], val_indices)
+    val_labels = tf.gather(train_set[1], val_indices)
+
+    # Create optimal set
+    optimal_data = tf.gather(train_set[0], optimal_indices)
+    optimal_labels = tf.gather(train_set[1], optimal_indices)
 
     # Create a reduced train set 
-    reduced_train_data = tf.gather(train_data, train_indices)
-    reduced_train_labels = tf.gather(train_labels, train_indices)
+    reduced_train_data = tf.gather(train_set[0], train_indices)
+    reduced_train_labels = tf.gather(train_set[1], train_indices)
 
-    breakpoint()
-
-    return reduced_train_data, reduced_train_labels, val_data, val_labels
+    return (reduced_train_data, reduced_train_labels), (optimal_data, optimal_labels), (val_data, val_labels)
