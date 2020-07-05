@@ -3,7 +3,7 @@
 
 """
 Contains the functions to manipulate the data.
-Date: 01/7/2020
+Date: 05/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -55,8 +55,8 @@ def extract_data(data_name):
     train_labels = np.squeeze(train[1])
     test_labels = np.squeeze(test[1])
 
-    return tf.cast(train_data[:20000], dtype=tf.float32), tf.cast(test_data[:4000], dtype=tf.float32), train_labels[:20000], test_labels[:4000]
-    #return tf.cast(train_data, dtype=tf.float32), tf.cast(test_data, dtype=tf.float32), train_labels, test_labels
+    return prep_data(train_data[:20000]), prep_data(test_data[:4000]), train_labels[:20000], test_labels[:4000]
+    #return prep_dat(train_data), prep_data(test_data), train_labels, test_labels
 
 
 def prep_labels(labels, class_nb=0):
@@ -82,6 +82,23 @@ def prep_labels(labels, class_nb=0):
     labels[labels == class_nb] = 1
 
     return labels
+
+
+def prep_data(data):
+    """ Normalizes the data.
+    Input:  data -> tf.tensor[float32], list
+                of examples.
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+    Output: norm_data -> tf.tensor[float32], list
+                of normalized examples.
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+    """
+
+    return tf.cast(data/255, dtype=tf.float32)
 
 
 def split_data(train_set, optimal_indices):
