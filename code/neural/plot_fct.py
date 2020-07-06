@@ -86,7 +86,7 @@ def plot_losses(train_loss_dict, val_loss_dict, plot_types):
         plt.plot(range(1, len(train_loss_dict.get(key))+1), train_loss_dict.get(key), plot_types[i], label="Train "+key)
         plt.plot(range(1, len(val_loss_dict.get(key))+1), val_loss_dict.get(key), plot_types[i]+'-', label="Validation "+key)
         plt.xlabel("Epoch")
-        plt.ylabel("Accuracy")
+        plt.ylabel("Loss")
         plt.legend()
         plt.grid(True, which="both") # Add grid
 

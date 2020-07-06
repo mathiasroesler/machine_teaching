@@ -3,7 +3,7 @@
 
 """
 Main program.
-Date: 01/7/2020
+Date: 06/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -72,7 +72,7 @@ def main(data_name):
     except FileNotFoundError:
         print("The file", file_name, "was not found.")
         print("\nGenerating optimal set")
-        optimal_indices = create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.4, batch_size=batch_size, epochs=5)
+        optimal_indices = create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.95, batch_size=batch_size, epochs=2)
 
     # Create data sets
     train_set, optimal_set, val_set = split_data((train_data, train_labels), optimal_indices)
@@ -120,6 +120,9 @@ def main(data_name):
             time_dict.update({strat: time_dict.get(strat) + toc-tic})
             train_loss_dict.update({strat: train_loss_dict.get(strat) + model.train_loss})
             val_loss_dict.update({strat: val_loss_dict.get(strat) + model.val_loss})
+
+            # Reset model
+            model.reset_model(data_shape, archi_type)
 
     # Average time, accuracies and losses
     for strat in strat_names:
