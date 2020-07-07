@@ -3,7 +3,7 @@
 
 """
 Contains the functions to manipulate the data.
-Date: 05/7/2020
+Date: 11/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -42,21 +42,16 @@ def extract_data(data_name):
 
     if data_name == 'cifar':
         # Extract cifar10 data and labels
-        train, test = tf.keras.datasets.cifar10.load_data()
-        train_data = train[0]
-        test_data = test[0]
+        (train_data, train_labels), (test_data, test_labels) = tf.keras.datasets.cifar10.load_data()
 
     else:
         # Extract mnist data and labels and reshape
-        train, test = tf.keras.datasets.mnist.load_data()
-        train_data = tf.reshape(train[0], (train[0].shape[0], train[0].shape[1], train[0].shape[2], 1))
-        test_data = tf.reshape(test[0], (test[0].shape[0], test[0].shape[1], test[0].shape[2], 1))
-
-    train_labels = np.squeeze(train[1])
-    test_labels = np.squeeze(test[1])
+        (train_data, train_labels), (test_data, test_labels) = tf.keras.datasets.mnist.load_data()
+        train_data = tf.reshape(train_data, (train_data.shape[0], train_data.shape[1], train_data.shape[2], 1))
+        test_data = tf.reshape(test_data, (test_data.shape[0], test_data.shape[1], test_data.shape[2], 1))
 
     return prep_data(train_data[:20000]), prep_data(test_data[:4000]), train_labels[:20000], test_labels[:4000]
-    #return prep_dat(train_data), prep_data(test_data), train_labels, test_labels
+    #return prep_data(train_data), prep_data(test_data), train_labels, test_labels
 
 
 def prep_labels(labels, class_nb=0):

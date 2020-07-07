@@ -72,7 +72,7 @@ class CustomModel(tf.keras.Model):
             self.loss_function = tf.keras.losses.CategoricalCrossentropy()
 
         # SPL loss attributes
-        self.warm_up = 5
+        self.warm_up = warm_up
         self.threshold_value = threshold_value
         self.growth_rate_value = growth_rate_value
         self.threshold = tf.Variable(np.finfo(np.float32).max, trainable=False, dtype=tf.float32)
