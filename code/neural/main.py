@@ -3,7 +3,7 @@
 
 """
 Main program.
-Date: 06/7/2020
+Date: 11/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -54,24 +54,19 @@ def main(data_name):
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
 
     if class_nb != -1:
-        print("\nBinary classifaction mode")
-        train_labels = tf.one_hot(prep_labels(train_labels, class_nb=class_nb), 2)
-        test_labels = tf.one_hot(prep_labels(test_labels, class_nb=class_nb), 2)
+        train_labels = tf.keras.utils.to_categorical(prep_labels(train_labels, class_nb=class_nb), 2)
+        test_labels = tf.keras.utils.to_categorical(prep_labels(test_labels, class_nb=class_nb), 2)
 
     else:
-        print("\nMulti-class classification mode")
-        train_labels = tf.one_hot(train_labels, 10)
-        test_labels = tf.one_hot(test_labels, 10)
+        train_labels = tf.keras.utils.to_categorical(train_labels, 10)
+        test_labels = tf.keras.utils.to_categorical(test_labels, 10)
 
     # Find the optimal set indices or extract indices from file
     try:
         file_name = data_name + "_indices.npy"
-        print("Loading data from file", file_name)
         optimal_indices = np.load(file_name)
 
     except FileNotFoundError:
-        print("The file", file_name, "was not found.")
-        print("\nGenerating optimal set")
         optimal_indices = create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.95, batch_size=batch_size, epochs=2)
 
     # Create data sets

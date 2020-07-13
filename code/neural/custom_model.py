@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 01/7/2020
+Date: 11/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -18,7 +18,7 @@ from selection_fct import *
 from init_fct import *
 
 
-class CustomModel(tf.keras.Model):
+class CustomModel(object):
     """ Custom neural network class. """
 
 
@@ -49,8 +49,6 @@ class CustomModel(tf.keras.Model):
             print("Error in init function of CustomModel: data_shape must have 3 elements with the two first ones equal.")
             exit(1)
 
-        super(CustomModel, self).__init__()
-
         # Class attributes
         self.class_nb = class_nb
         self.model = self.set_model(data_shape, archi_type=archi_type) # Add layers to model
@@ -63,12 +61,12 @@ class CustomModel(tf.keras.Model):
 
         if archi_type == 2:
             # If the All-CNN architecture is used
-            self.optimizer = tf.keras.optimizers.Adam(1e-5)
+            self.optimizer = tf.keras.optimizers.Adam()
             self.loss_function = tf.keras.losses.CategoricalCrossentropy()
 
         if archi_type == 3:
             # If the CNN architecture is used
-            self.optimizer = tf.keras.optimizers.Adadelta()
+            self.optimizer = tf.keras.optimizers.Adam()
             self.loss_function = tf.keras.losses.CategoricalCrossentropy()
 
         # SPL loss attributes
@@ -86,6 +84,42 @@ class CustomModel(tf.keras.Model):
         # Loss attributes
         self.train_loss = np.array([], dtype=np.float32)
         self.val_loss = np.array([], dtype=np.float32)
+
+
+    def get_train_acc(self):
+        """ Getter for training accuracy.
+        Input:  
+        Output: train_acc -> np.array[float32], train accuracy.
+        """
+
+        return self.train_acc
+
+
+    def get_test_acc(self):
+        """ Getter for testing accuracy.
+        Input:
+        Output: test_acc -> np.array[float32], testing accuracy.
+        """
+
+        return self.test_acc
+
+    
+    def get_train_loss(self):
+        """ Getter for training loss.
+        Input:
+        Output: train_loss -> np.array[float32], training loss.
+        """
+
+        return self.train_loss
+
+    
+    def get_val_loss(self):
+        """ Getter for validation loss.
+        Input:
+        Ouput: val_loss -> np.array[float32], validation loss.
+        """
+
+        return self.val_loss
 
 
     def set_model(self, input_shape, archi_type=1):
@@ -152,19 +186,14 @@ class CustomModel(tf.keras.Model):
                 model.add(ZeroPadding2D(2, input_shape=input_shape))
                 input_shape = (input_shape[0]+4, input_shape[1]+4, input_shape[2])
 
-            model.add(Conv2D(filters=16, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=input_shape))
-            model.add(Conv2D(filters=32, kernel_size=3, strides=1, padding='same', activation='relu'))
-            model.add(MaxPool2D(pool_size=2))
-            model.add(Conv2D(filters=64, kernel_size=4, strides=1, padding='same', activation='relu'))
-            model.add(MaxPool2D(pool_size=2))
-            model.add(Conv2D(filters=128, kernel_size=4, strides=1, padding='same', activation='relu'))
-            model.add(MaxPool2D(pool_size=2))
-            model.add(Dropout(0.2))
+            model.add(Conv2D(32, (3, 3), activation='relu', input_shape=input_shape))
+            model.add(MaxPool2D((2, 2)))
+            model.add(Conv2D(64, (3, 3), activation='relu'))
+            model.add(MaxPool2D((2, 2)))
+            model.add(Conv2D(64, (3, 3), activation='relu'))
             model.add(Flatten())
-            model.add(Dropout(0.2))
-            model.add(Dense(512, activation='relu'))
-            model.add(Dropout(0.2))
-            model.add(Dense(10, activation='softmax'))
+            model.add(Dense(64, activation='relu'))
+            model.add(Dense(10))
 
         return model
 
@@ -204,6 +233,13 @@ class CustomModel(tf.keras.Model):
         except AssertionError:
             print("Error in function train of CustomModel: the strategy must be a string, either Full, MT, CL or SPL")
             exit(1)
+
+        try:
+            assert(train_labels.shape[1] == 10 or train_labels.shape[1] == 2)
+
+        except AssertionError:
+            # If the labels are not one hot
+            self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
         # Reset accuracies and losses
         self.train_acc = np.array([], dtype=np.float32)
@@ -365,6 +401,14 @@ class CustomModel(tf.keras.Model):
         """
 
         loss_object = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
+
+        try:
+            assert(labels.shape[1] == 10 or labels.shape[1] == 2)
+
+        except AssertionError:
+            # If the labels are not one hot
+            self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+
 
         loss_value = loss_object(y_true=labels, y_pred=predicted_labels) # Estimate loss
         v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold

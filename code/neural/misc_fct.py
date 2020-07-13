@@ -3,7 +3,7 @@
 
 """
 Miscellaneous functions.
-Date: 25/5/2020
+Date: 12/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -83,7 +83,7 @@ def find_class_nb(labels):
         return np.max(np.argmax(labels, axis=1))+1
 
     else:
-        return np.max(labels)+1
+        return int(np.max(labels, axis=0))+1
 
 
 def average_examples(data, labels):
