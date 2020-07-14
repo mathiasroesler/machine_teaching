@@ -31,7 +31,7 @@ def main(data_name):
 
     # Variables for neural networks
     archi_type = 1
-    epochs = 2
+    epochs = 10
     batch_size = 128
 
     # Variables for plotting
@@ -40,7 +40,7 @@ def main(data_name):
     # Other variables
     strat_names = ["Full", "MT", "CL", "SPL"]
     class_nb = -1
-    iteration_nb = 1
+    iteration_nb = 3
 
     # Dictionnaries 
     time_dict = dict()
@@ -49,6 +49,7 @@ def main(data_name):
     train_loss_dict = dict()
     val_loss_dict = dict()
     model_dict = dict()
+    normalizer_dict = dict()
 
     # Extract data from files
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
@@ -87,6 +88,7 @@ def main(data_name):
         model_dict[strat] = CustomModel(data_shape, max_class_nb, archi_type, warm_up, threshold, growth_rate)
         train_loss_dict[strat] = [0]
         val_loss_dict[strat] = [0]
+        normalizer_dict[strat] = [0]
 
     for i in range(iteration_nb):
         print("\nITERATION", i+1)
@@ -111,20 +113,21 @@ def main(data_name):
             model.test(test_data, test_labels)
 
             # Save accuracy, losses and time
-            train_acc_dict.update({strat: train_acc_dict.get(strat) + model.train_acc})
+            train_acc_dict.update({strat: update_dict(train_acc_dict.get(strat), model.train_acc)})
+            train_loss_dict.update({strat: update_dict(train_loss_dict.get(strat), model.train_loss)})
+            val_loss_dict.update({strat: update_dict(val_loss_dict.get(strat), model.val_loss)})
+            normalizer_dict.update({strat: update_dict(normalizer_dict.get(strat), np.ones(len(model.train_acc)))})
             time_dict.update({strat: time_dict.get(strat) + toc-tic})
-            train_loss_dict.update({strat: train_loss_dict.get(strat) + model.train_loss})
-            val_loss_dict.update({strat: val_loss_dict.get(strat) + model.val_loss})
 
             # Reset model
             model.reset_model(data_shape, archi_type)
 
     # Average time, accuracies and losses
     for strat in strat_names:
-        time_dict.update({strat: time_dict.get(strat)/iteration_nb})
-        train_acc_dict.update({strat: train_acc_dict.get(strat)/iteration_nb})
-        train_loss_dict.update({strat: train_loss_dict.get(strat)/iteration_nb})
-        val_loss_dict.update({strat: val_loss_dict.get(strat)/iteration_nb})
+        time_dict.update({strat: time_dict.get(strat)/normalizer_dict.get(strat)})
+        train_acc_dict.update({strat: train_acc_dict.get(strat)/normalizer_dict.get(strat)})
+        train_loss_dict.update({strat: train_loss_dict.get(strat)/normalizer_dict.get(strat)})
+        val_loss_dict.update({strat: val_loss_dict.get(strat)/normalizer_dict.get(strat)})
         test_acc_dict[strat] = model_dict.get(strat).test_acc
 
     # Plot results

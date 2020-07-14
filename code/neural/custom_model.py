@@ -288,8 +288,17 @@ class CustomModel(object):
                     optimizer=self.optimizer,
                     metrics=['accuracy']
                     )
+
+        # Define callbacks
+        stop_callback = tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss', patience=1
+                )
         
-        hist = self.model.fit(train_data, train_labels, validation_data=val_set, batch_size=batch_size, epochs=epochs)
+        hist = self.model.fit(
+                train_data, train_labels, 
+                validation_data=val_set, callbacks=[stop_callback],
+                batch_size=batch_size, epochs=epochs
+                )
     
         # Save accuracies and losses
         self.train_acc = np.array(hist.history.get('accuracy'))
@@ -329,11 +338,21 @@ class CustomModel(object):
                     metrics=['accuracy']
                     )
         
+        # Define callbacks
+        stop_callback = tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss', patience=1
+                )
+
         curriculum_indices = two_step_curriculum(train_data, train_labels)
 
         # Train model with easy then hard examples
         for i in range(len(curriculum_indices)):
-            hist = self.model.fit(tf.gather(train_data, curriculum_indices[i]), tf.gather(train_labels, curriculum_indices[i]), validation_data=val_set, batch_size=batch_size, epochs=epochs//2)
+            hist = self.model.fit(
+                    tf.gather(train_data, curriculum_indices[i]),
+                    tf.gather(train_labels, curriculum_indices[i]),
+                    validation_data=val_set, callbacks=[stop_callback],
+                    batch_size=batch_size, epochs=epochs//2
+                    )
 
             # Save accuracies and losses
             self.train_acc = np.concatenate((self.train_acc, hist.history.get('accuracy')), axis=0) 
@@ -380,9 +399,15 @@ class CustomModel(object):
         epoch_callback = tf.keras.callbacks.LambdaCallback(
                 on_epoch_end=lambda epoch, logs: self.assign(epoch, reset=True)
                 )
+        stop_callback = tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss', patience=1
+                )
 
-        hist = self.model.fit(train_data, train_labels, validation_data=val_set, batch_size=batch_size, epochs=epochs,
-                callbacks=[batch_callback, epoch_callback])
+        hist = self.model.fit(
+                train_data, train_labels, 
+                validation_data=val_set, callbacks=[batch_callback, epoch_callback, stop_callback],
+                batch_size=batch_size, epochs=epochs
+                )
     
         # Save accuracies and losses
         self.train_acc = np.array(hist.history.get('accuracy'))
@@ -408,7 +433,6 @@ class CustomModel(object):
         except AssertionError:
             # If the labels are not one hot
             self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
-
 
         loss_value = loss_object(y_true=labels, y_pred=predicted_labels) # Estimate loss
         v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold

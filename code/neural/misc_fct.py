@@ -150,3 +150,21 @@ def display(acc_list, display_labels, times):
         acc_str = str(np.round(acc_list[i], 4)).ljust(len("test accuracies"), " ") + " |"
         
         print(label_str, acc_str, "%.2f" % times[i], "s")
+
+
+def update_dict(dict_array, new_array):
+    """ Updates the dictionnary array with the results of a new iteration.
+    Input:  dict_array -> np.array[np.float32], array to be updated.
+            new_array -> np.array[np.float32], array to be added.
+    Output: updated_array -> np.array[np.float32], updated array.
+    """
+
+    if len(new_array) > len(dict_array):
+        updated_array = new_array
+        updated_array[:len(dict_array)] += dict_array
+
+    else:
+        updated_array = dict_array
+        updated_array[:len(new_array)] += new_array
+
+    return updated_array
