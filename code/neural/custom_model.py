@@ -163,7 +163,7 @@ class CustomModel(object):
             model.add(Dropout(0.5))
             model.add(Conv2D(192, (3, 3), activation='relu', kernel_initializer='random_normal'))
             model.add(Conv2D(192, (1, 1), activation='relu', kernel_initializer='random_normal'))
-            model.add(Conv2D(10, (1, 1), activation='relu', kernel_initializer='random_normal'))
+            model.add(Conv2D(self.class_nb, (1, 1), activation='relu', kernel_initializer='random_normal'))
             model.add(GlobalAveragePooling2D())
             model.add(Softmax()) 
 
@@ -181,7 +181,7 @@ class CustomModel(object):
             model.add(Conv2D(64, (3, 3), activation='relu'))
             model.add(Flatten())
             model.add(Dense(64, activation='relu'))
-            model.add(Dense(10))
+            model.add(Dense(self.class_nb))
 
         return model
 
@@ -230,6 +230,7 @@ class CustomModel(object):
             exit(1)
 
         try:
+            assert(len(train_labels.shape) != 1)
             assert(train_labels.shape[1] == 10 or train_labels.shape[1] == 2)
 
         except AssertionError:
@@ -417,11 +418,12 @@ class CustomModel(object):
         loss_object = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
         try:
+            assert(len(labels.shape) != 1)
             assert(labels.shape[1] == 10 or labels.shape[1] == 2)
 
         except AssertionError:
             # If the labels are not one hot
-            self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
+            loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction=tf.keras.losses.Reduction.NONE)
 
         loss_value = loss_object(y_true=labels, y_pred=predicted_labels) # Estimate loss
         v = tf.cast(loss_value < self.threshold, dtype=tf.float32) # Find examples with a smaller loss then the threshold

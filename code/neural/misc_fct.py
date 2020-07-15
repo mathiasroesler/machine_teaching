@@ -22,9 +22,14 @@ def find_indices(labels):
     Output: indices -> list[np.array[int]], list of indices for each class. 
     """
 
-    if tf.is_tensor(labels):
-        # If labels are one hot
-        labels = np.argmax(labels, axis=1)
+    try:
+        assert(len(labels.shape) == 1)
+
+    except AssertionError:
+        # Labels may be one hot
+        if labels.shape[1] != 1:
+            # If labels are one hot convert to sparse
+            labels = np.argmax(labels, axis=1)
 
     nb_classes = np.max(labels)+1
     indices = [None]*nb_classes
@@ -54,9 +59,14 @@ def find_examples(data, labels):
                 Fourth dimension, color channel. 
     """
 
-    if tf.is_tensor(labels):
-        # If labels are one hot
-        labels = np.argmax(labels, axis=1)
+    try:
+        assert(len(labels.shape) == 1)
+
+    except AssertionError:
+        #  Labels may be one hot
+        if labels.shape[1] != 1:
+            # If labels are one hot convert to sparse
+            labels = np.argmax(labels, axis=1)
 
     indices = find_indices(labels)
     nb_classes = np.max(labels)+1
@@ -78,12 +88,16 @@ def find_class_nb(labels):
     Output: class_nb -> int, number of classes.
     """
 
-    if tf.is_tensor(labels):
-        # If labels are one hot
-        return np.max(np.argmax(labels, axis=1))+1
+    try:
+        assert(len(labels.shape) == 1)
 
-    else:
-        return int(np.max(labels, axis=0))+1
+    except AssertionError:
+        # Labels may be one hot
+        if labels.shape[1] != 1:
+            # If labels are one hot
+            return np.max(np.argmax(labels, axis=1))+1
+
+    return int(np.max(labels, axis=0))+1
 
 
 def average_examples(data, labels):
@@ -103,9 +117,14 @@ def average_examples(data, labels):
                 Fourth dimension, color channel. 
     """
 
-    if tf.is_tensor(labels):
-        # If labels are one hot
-        labels = np.argmax(labels, axis=1)
+    try:
+        assert(len(labels.shape) == 1)
+
+    except AssertionError:
+        # Labels may be one hot 
+        if labels.shape[1] != 1:
+            # Labels are one hot convert to sparse
+            labels = np.argmax(labels, axis=1)
 
     nb_classes = np.max(labels)+1
     averages = np.zeros((nb_classes, data[0].shape[0], data[0].shape[1], data[0].shape[2]), dtype=np.float32)

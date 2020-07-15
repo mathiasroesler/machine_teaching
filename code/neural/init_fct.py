@@ -3,7 +3,7 @@
 
 """
 Contains the initializations functions for the teacher model.
-Date: 30/6/2020
+Date: 16/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -25,9 +25,14 @@ def rndm_init(labels):
                 initial example to be used for each class.
     """
 
-    if tf.is_tensor(labels):
-        # If the labels are one hot convert to simple labels
-        labels = np.argmax(labels, axis=1)
+    try:
+        assert(len(labels.shape) == 1)
+
+    except AssertionError:
+        # Labels may be one hot
+        if labels.shape[1] != 1:
+            # If labels are one hot convert to sparse
+            labels = np.argmax(labels, axis=1)
 
     rng = default_rng() # Set seed 
 
@@ -57,9 +62,14 @@ def nearest_avg_init(data, labels):
                 initial example to be used for each class.
     """
 
-    if tf.is_tensor(labels):
-        # If the labels are one hot convert to simple labels
-        labels = np.argmax(labels, axis=1)
+    try:
+        assert(len(labels.shape) == 1)
+
+    except AssertionError:
+        # Labels may be one hot
+        if labels.shape[1] != 1:
+            # If labels are one hot convert to sparse
+            labels = np.argmax(labels, axis=1)
 
     max_class_nb = np.max(labels)
     indices = find_indices(labels)             # List of example indices for each class
