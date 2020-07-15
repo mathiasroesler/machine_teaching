@@ -54,20 +54,8 @@ class CustomModel(object):
         self.model = self.set_model(data_shape, archi_type=archi_type) # Add layers to model
 
         # Model attributes
-        if archi_type == 1:
-            # If the LeNet5 architecture is used
-            self.optimizer = tf.keras.optimizers.Adam()
-            self.loss_function = tf.keras.losses.CategoricalCrossentropy()
-
-        if archi_type == 2:
-            # If the All-CNN architecture is used
-            self.optimizer = tf.keras.optimizers.Adam()
-            self.loss_function = tf.keras.losses.CategoricalCrossentropy()
-
-        if archi_type == 3:
-            # If the CNN architecture is used
-            self.optimizer = tf.keras.optimizers.Adam()
-            self.loss_function = tf.keras.losses.CategoricalCrossentropy()
+        self.optimizer = tf.keras.optimizers.Adam()
+        self.loss_function = tf.keras.losses.CategoricalCrossentropy()
 
         # SPL loss attributes
         self.warm_up = warm_up
@@ -205,7 +193,14 @@ class CustomModel(object):
         Output:
         """
 
+        # Reset weigths
         self.model = self.set_model(input_shape, archi_type)
+
+        # Reset accuracies and losses
+        self.train_acc = np.array([], dtype=np.float32)
+        self.val_acc = np.array([], dtype=np.float32)
+        self.train_loss = np.array([], dtype=np.float32)
+        self.val_loss = np.array([], dtype=np.float32)
     
 
     def train(self, train_data, train_labels, val_set, strategy, epochs=10, batch_size=32):
@@ -240,12 +235,6 @@ class CustomModel(object):
         except AssertionError:
             # If the labels are not one hot
             self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-
-        # Reset accuracies and losses
-        self.train_acc = np.array([], dtype=np.float32)
-        self.val_acc = np.array([], dtype=np.float32)
-        self.train_loss = np.array([], dtype=np.float32)
-        self.val_loss = np.array([], dtype=np.float32)
 
         if strategy == "MT" or strategy == "Full":
             self.simple_train(train_data, train_labels, val_set, epochs, batch_size)
