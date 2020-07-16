@@ -61,8 +61,10 @@ if __name__ == "__main__":
 
     # Other variables
     strat_names = ["Full", "MT", "CL", "SPL"]
-    class_nb = -1    # Class number for one vs all
-    iteration_nb = 3 # Number of times the model learns
+    iteration_nb = 3 
+    class_nb = -1  # Class number for one vs all
+    sparse = False  # If labels are to be sparse or not
+    verbose = 2  # Verbosity for learning
 
     # Dictionnaries 
     time_dict = dict()
@@ -76,15 +78,20 @@ if __name__ == "__main__":
     # Extract data from files
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
 
-    if class_nb != -1:
-        train_labels = tf.keras.utils.to_categorical(
-                prep_labels(train_labels, class_nb=class_nb), 2)
-        test_labels = tf.keras.utils.to_categorical(
-                prep_labels(test_labels, class_nb=class_nb), 2)
+    try:
+        assert(not sparse)
 
-    else:
-        train_labels = tf.keras.utils.to_categorical(train_labels, 10)
-        test_labels = tf.keras.utils.to_categorical(test_labels, 10)
+    except AssertionError:
+        # Convert the labels to one hot
+        if class_nb != -1:
+            train_labels = tf.keras.utils.to_categorical(
+                    prep_labels(train_labels, class_nb=class_nb), 2)
+            test_labels = tf.keras.utils.to_categorical(
+                    prep_labels(test_labels, class_nb=class_nb), 2)
+
+        else:
+            train_labels = tf.keras.utils.to_categorical(train_labels, 10)
+            test_labels = tf.keras.utils.to_categorical(test_labels, 10)
 
     # Find the optimal set indices or extract indices from file
     try:
@@ -130,11 +137,11 @@ if __name__ == "__main__":
 
             if strat == "MT":
                 model.train(optimal_data, optimal_labels, val_set, strat,
-                        epochs, batch_size)
+                        epochs, batch_size, verbose)
 
             else:
                 model.train(train_data, train_labels, val_set, strat, epochs,
-                        batch_size)
+                        batch_size, verbose)
 
             toc = time.time()
 

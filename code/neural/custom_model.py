@@ -32,13 +32,14 @@ class CustomModel(object):
         1 for LeNet5, 2 for All-CNN, 3 for CNN.
         Input:  data_shape -> tuple[int], shape of the input data. 
                 class_nb -> int, number of classes.
-                archi_type -> int, selects the architecture.
+                archi_type -> int, selects the architecture,
+                    default value 1.
                 warm_up -> int, batch number after which the model is
-                    "warmed up".
+                    "warmed up", default value 5.
                 threshold_value -> float32, initial value for SPL 
-                    threshold.
+                    threshold, default value 0.4.
                 growth_rate_value -> float32, initial value for SPL 
-                    growth rate.
+                    growth rate, default value 1,1.
         Output: 
 
         """
@@ -92,7 +93,8 @@ class CustomModel(object):
         The architecture depends on the variable archi_type.
         1 for LeNet5, 2 for All-CNN, 3 for CNN.
         Input:  input_shape -> tuple[int], shape of the input data. 
-                archi_type -> int, selects the architecture. 
+                archi_type -> int, selects the architecture,
+                    default value 1. 
         Output: model -> tf.keras.models.Sequential, structured model.
 
         """
@@ -178,7 +180,8 @@ class CustomModel(object):
         The architecture depends on the variable archi_type.
         1 for LeNet5, 2 for All-CNN, 3 for CNN.
         Input:  input_shape -> tuple[int], shape of the input data. 
-                archi_type -> int, selects the architecture. 
+                archi_type -> int, selects the architecture,
+                    default value 1.
         Output:
 
         """
@@ -193,7 +196,7 @@ class CustomModel(object):
     
 
     def train(self, train_data, train_labels, val_set, strategy, epochs=10,
-            batch_size=32):
+            batch_size=32, verbose=0):
         """ Calls the training function.
 
         The strategy depends on the variable strategy.
@@ -213,9 +216,11 @@ class CustomModel(object):
                     Second dimension, one hot labels.
                 strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
                 epochs -> int, number of epochs for the training of the
-                    neural network.
+                    neural network, default value 10.
                 batch_size -> int, number of examples used in a batch 
-                    for the neural network.
+                    for the neural network, default value 32.
+                verbose -> int, amount of printing for the training,
+                    default value 0, see Tensorflow for details.
         Output:
 
         """    
@@ -240,18 +245,19 @@ class CustomModel(object):
 
         if strategy == "MT" or strategy == "Full":
             self.simple_train(train_data, train_labels, val_set, epochs,
-                    batch_size)
+                    batch_size, verbose)
 
         elif strategy == "CL":
-            self.CL_train(train_data, train_labels, val_set, epochs, batch_size)
+            self.CL_train(train_data, train_labels, val_set, epochs, batch_size,
+                    verbose)
 
         elif strategy == "SPL":
             self.SPL_train(train_data, train_labels, val_set, epochs,
-                    batch_size)
+                    batch_size, verbose)
 
 
     def simple_train(self, train_data, train_labels, val_set, epochs=10, 
-            batch_size=32):
+            batch_size=32, verbose=0):
         """ Trains the model.
         
         Input:  train_data -> tf.tensor[float32], list of examples. 
@@ -265,9 +271,11 @@ class CustomModel(object):
                     First dimension, examples.
                     Second dimension, one hot labels.
                 epochs -> int, number of epochs for the training of the
-                    neural network.
+                    neural network, default value 10.
                 batch_size -> int, number of examples used in a batch 
-                    for the neural network.
+                    for the neural network, default value 32.
+                verbose -> int, amount of printing for the training,
+                    default value 0, see Tensorflow for details.
         Output:
 
         """    
@@ -295,7 +303,7 @@ class CustomModel(object):
         hist = self.model.fit(
                 train_data, train_labels, 
                 validation_data=val_set, callbacks=[stop_callback],
-                batch_size=batch_size, epochs=epochs
+                batch_size=batch_size, epochs=epochs, verbose=verbose
                 )
     
         # Save accuracies and losses
@@ -306,7 +314,7 @@ class CustomModel(object):
 
 
     def CL_train(self, train_data, train_labels, val_set, epochs=10, 
-            batch_size=32):
+            batch_size=32, verbose=0):
         """ Trains the model.
 
         The training uses the curriculum strategy.
@@ -321,9 +329,11 @@ class CustomModel(object):
                     First dimension, examples.
                     Second dimension, one hot labels.
                 epochs -> int, number of epochs for the training of the
-                    neural network.
+                    neural network, default value 10.
                 batch_size -> int, number of examples used in a batch 
-                    for the neural network.
+                    for the neural network, default value 32.
+                verbose -> int, amount of printing for training
+                    default value 0, see Tensorflow for details.
         Output:
 
         """    
@@ -339,13 +349,11 @@ class CustomModel(object):
         # Compile model
         self.model.compile(loss=self.loss_function,
                     optimizer=self.optimizer,
-                    metrics=['accuracy']
-                    )
+                    metrics=['accuracy'])
         
         # Define callbacks
         stop_callback = tf.keras.callbacks.EarlyStopping(
-                monitor='val_loss', patience=1
-                )
+                monitor='val_loss', patience=1)
 
         curriculum_indices = two_step_curriculum(train_data, train_labels)
 
@@ -355,8 +363,7 @@ class CustomModel(object):
                     tf.gather(train_data, curriculum_indices[i]),
                     tf.gather(train_labels, curriculum_indices[i]),
                     validation_data=val_set, callbacks=[stop_callback],
-                    batch_size=batch_size, epochs=epochs//2
-                    )
+                    batch_size=batch_size, epochs=epochs//2, verbose=verbose)
 
             # Save accuracies and losses
             self.train_acc = np.concatenate((self.train_acc, 
@@ -370,7 +377,7 @@ class CustomModel(object):
 
 
     def SPL_train(self, train_data, train_labels, val_set, epochs=10,
-            batch_size=32):
+            batch_size=32, verbose=0):
         """ Trains the model.
 
         The training uses the self-paced strategy.
@@ -385,9 +392,11 @@ class CustomModel(object):
                     First dimension, examples.
                     Second dimension, one hot labels.
                 epochs -> int, number of epochs for the training of the
-                    neural network.
+                    neural network, default value 10.
                 batch_size -> int, number of examples used in a batch 
-                    for the neural network.
+                    for the neural network, default value 32.
+                verbose -> int, amount of printing for the training
+                    default value 0, see Tensorflow for details.
         Output:
 
         """    
@@ -403,26 +412,21 @@ class CustomModel(object):
         # Compile model
         self.model.compile(loss=self.SPL_loss,
                     optimizer=self.optimizer,
-                    metrics=['accuracy']
-                    )
+                    metrics=['accuracy'])
 
         # Define callback functions
         batch_callback = tf.keras.callbacks.LambdaCallback(
-                on_batch_end=lambda batch, logs: self.assign(batch)
-                )
+                on_batch_end=lambda batch, logs: self.assign(batch))
         epoch_callback = tf.keras.callbacks.LambdaCallback(
-                on_epoch_end=lambda epoch, logs: self.assign(epoch, reset=True)
-                )
+                on_epoch_end=lambda epoch, logs: self.assign(epoch, reset=True))
         stop_callback = tf.keras.callbacks.EarlyStopping(
-                monitor='val_loss', patience=1
-                )
+                monitor='val_loss', patience=1)
 
         hist = self.model.fit(
                 train_data, train_labels, 
                 validation_data=val_set, callbacks=[batch_callback, 
                     epoch_callback, stop_callback],
-                batch_size=batch_size, epochs=epochs
-                )
+                batch_size=batch_size, epochs=epochs, verbose=verbose)
     
         # Save accuracies and losses
         self.train_acc = np.array(hist.history.get('accuracy'))
@@ -481,7 +485,7 @@ class CustomModel(object):
             self.growth_rate.assign(self.growth_rate_value)
 
        
-    def test(self, test_data, test_labels, batch_size=32):
+    def test(self, test_data, test_labels, batch_size=32, verbose=0):
         """ Tests the model.
 
         Input:  test_data -> tf.tensor[float32], list
@@ -492,12 +496,14 @@ class CustomModel(object):
                 test_labels -> tf.tensor[int], list of one hot 
                     labels associated with the test data.
                 batch_size -> int, number of examples used in a 
-                    batch for the neural network.
+                    batch for the neural network, default value 32.
+                verbose -> int, amount of printing for testing,
+                    default value 0, see Tensorflow for details.
         Output:
 
         """
         score = self.model.evaluate(test_data, test_labels, 
-                batch_size=batch_size)
+                batch_size=batch_size, verbose=verbose)
         self.test_acc = np.append(self.test_acc, score[1])
 
 
@@ -532,9 +538,9 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
                 for the thresholds.
             target_acc -> float, accuracy threshold. 
             batch_size -> int, number of examples used in a batch for
-                the neural network.
+                the neural network, default value 10.
             epochs -> int, number of epochs for the training of the 
-                neural network.
+                neural network, default value 32.
     Output: added_indices -> np.array[int], list of indices of selected
                 examples.
 
