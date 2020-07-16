@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 11/7/2020
+Date: 16/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -24,15 +24,21 @@ class CustomModel(object):
 
     def __init__(self, data_shape, class_nb, archi_type=1, warm_up=5, threshold_value=0.4, growth_rate_value=1.1):
         """ Initializes the model.
+
+        The architecture depends on the variable archi_type.
+        1 for LeNet5, 2 for All-CNN, 3 for CNN.
         Input:  data_shape -> tuple[int], shape of the input data. 
                 class_nb -> int, number of classes.
-                archi_type -> int, architecture type: 1 for LeNet5, 2 for All-CNN.
-                warm_up -> int, batch number after which the model is "warmed up".
-                threshold_value -> float32, initial value for SPL threshold.
-                growth_rate_value -> float32, initial value for SPL growth rate.
+                archi_type -> int, selects the architecture.
+                warm_up -> int, batch number after which the model is
+                    "warmed up".
+                threshold_value -> float32, initial value for SPL 
+                    threshold.
+                growth_rate_value -> float32, initial value for SPL 
+                    growth rate.
         Output: 
-        """
 
+        """
         try:
             assert(np.issubdtype(type(class_nb), np.integer))
             assert(class_nb > 1)
@@ -74,50 +80,16 @@ class CustomModel(object):
         self.val_loss = np.array([], dtype=np.float32)
 
 
-    def get_train_acc(self):
-        """ Getter for training accuracy.
-        Input:  
-        Output: train_acc -> np.array[float32], train accuracy.
-        """
-
-        return self.train_acc
-
-
-    def get_test_acc(self):
-        """ Getter for testing accuracy.
-        Input:
-        Output: test_acc -> np.array[float32], testing accuracy.
-        """
-
-        return self.test_acc
-
-    
-    def get_train_loss(self):
-        """ Getter for training loss.
-        Input:
-        Output: train_loss -> np.array[float32], training loss.
-        """
-
-        return self.train_loss
-
-    
-    def get_val_loss(self):
-        """ Getter for validation loss.
-        Input:
-        Ouput: val_loss -> np.array[float32], validation loss.
-        """
-
-        return self.val_loss
-
-
     def set_model(self, input_shape, archi_type=1):
-        """ Creates a model with a different architecture depending on the 
-        type.
-        Input:  input_shape -> tuple[int], shape of the input data. 
-                archi_type -> int, architecture type: 1 for LeNet5, 2 for All-CNN, 3 for CNN.
-        Output: model -> tf.keras.models.Sequential, structured model.
-        """
+        """ Creates a model.
 
+        The architecture depends on the variable archi_type.
+        1 for LeNet5, 2 for All-CNN, 3 for CNN.
+        Input:  input_shape -> tuple[int], shape of the input data. 
+                archi_type -> int, selects the architecture. 
+        Output: model -> tf.keras.models.Sequential, structured model.
+
+        """
         try:
             assert(np.issubdtype(type(archi_type), np.integer))
             assert(archi_type != 1 or archi_type != 2 or archi_type != 3)
@@ -187,12 +159,16 @@ class CustomModel(object):
 
 
     def reset_model(self, input_shape, archi_type=1):
-        """ Resets the weights of the model.
-        Input:  input_shape -> tuple[int], shape of the input data. 
-                archi_type -> int, architecture type: 1 for LeCun, 2 for full convolution.
-        Output:
-        """
+        """ Resets attributes of the model.
 
+        The model is recreated and the accuracies and losses are reset.
+        The architecture depends on the variable archi_type.
+        1 for LeNet5, 2 for All-CNN, 3 for CNN.
+        Input:  input_shape -> tuple[int], shape of the input data. 
+                archi_type -> int, selects the architecture. 
+        Output:
+
+        """
         # Reset weigths
         self.model = self.set_model(input_shape, archi_type)
 
@@ -204,23 +180,31 @@ class CustomModel(object):
     
 
     def train(self, train_data, train_labels, val_set, strategy, epochs=10, batch_size=32):
-        """ Calls the training function depending on the strategy.
+        """ Calls the training function.
+
+        The strategy depends on the variable strategy.
+        Full -> classic training,
+        MT -> classic training with the optimal set,
+        CL -> curriculum training,
+        SPL -> self-paced training.
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> tf.tensor[int], list of one hot labels associated
-                    with the train data.
-                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                train_labels -> tf.tensor[int], list of one hot labels
+                    associated with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]),
+                    validation set.
                     First dimension, examples.
                     Second dimension, one hot labels.
                 strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
-                epochs -> int, number of epochs for the training of the neural network.
-                batch_size -> int, number of examples used in a batch for the neural
-                    network.
+                epochs -> int, number of epochs for the training of the
+                    neural network.
+                batch_size -> int, number of examples used in a batch 
+                    for the neural network.
         Output:
-        """    
 
+        """    
         try:
             assert(isinstance(strategy, str))
             assert(strategy == "MT" or strategy == "CL" or strategy == "Full" or strategy == "SPL")
@@ -248,22 +232,25 @@ class CustomModel(object):
 
 
     def simple_train(self, train_data, train_labels, val_set, epochs=10, batch_size=32):
-        """ Trains the model with the given inputs.
+        """ Trains the model.
+        
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> tf.tensor[int], list of one hot labels associated
-                    with the train data.
-                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                train_labels -> tf.tensor[int], list of one hot labels 
+                    associated with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]),
+                    validation set.
                     First dimension, examples.
                     Second dimension, one hot labels.
-                epochs -> int, number of epochs for the training of the neural network.
-                batch_size -> int, number of examples used in a batch for the neural
-                    network.
+                epochs -> int, number of epochs for the training of the
+                    neural network.
+                batch_size -> int, number of examples used in a batch 
+                    for the neural network.
         Output:
-        """    
 
+        """    
         try:
             assert(epochs > 1)
             assert(np.issubdtype(type(epochs), np.integer))
@@ -298,22 +285,26 @@ class CustomModel(object):
 
 
     def CL_train(self, train_data, train_labels, val_set, epochs=10, batch_size=32):
-        """ Trains the model using a curriculum and the given data.
+        """ Trains the model.
+
+        The training uses the curriculum strategy.
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> tf.tensor[int], list of one hot labels associated
-                    with the train data.
-                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                train_labels -> tf.tensor[int], list of one hot labels 
+                    associated with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]),
+                    validation set.
                     First dimension, examples.
                     Second dimension, one hot labels.
-                epochs -> int, number of epochs for the training of the neural network.
-                batch_size -> int, number of examples used in a batch for the neural
-                    network.
+                epochs -> int, number of epochs for the training of the
+                    neural network.
+                batch_size -> int, number of examples used in a batch 
+                    for the neural network.
         Output:
-        """    
 
+        """    
         try:
             assert(epochs > 1)
             assert(np.issubdtype(type(epochs), np.integer))
@@ -352,22 +343,26 @@ class CustomModel(object):
 
 
     def SPL_train(self, train_data, train_labels, val_set, epochs=10, batch_size=32):
-        """ Trains the model using self-paced training and the given inputs. 
+        """ Trains the model.
+
+        The training uses the self-paced strategy.
         Input:  train_data -> tf.tensor[float32], list of examples. 
                     First dimension, number of examples.
                     Second and third dimensions, image. 
                     Fourth dimension, color channel. 
-                train_labels -> tf.tensor[int], list of one hot labels associated
-                    with the train data.
-                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation set.
+                train_labels -> tf.tensor[int], list of one hot labels
+                    associated with the train data.
+                val_set -> tuple(tf.tensor[float32], tf.tensor[int]), 
+                    validation set.
                     First dimension, examples.
                     Second dimension, one hot labels.
-                epochs -> int, number of epochs for the training of the neural network.
-                batch_size -> int, number of examples used in a batch for the neural
-                    network.
+                epochs -> int, number of epochs for the training of the
+                    neural network.
+                batch_size -> int, number of examples used in a batch 
+                    for the neural network.
         Output:
-        """    
 
+        """    
         try:
             assert(epochs > 1)
             assert(np.issubdtype(type(epochs), np.integer))
@@ -407,14 +402,15 @@ class CustomModel(object):
         
 
     def SPL_loss(self, labels, predicted_labels):
-        """ Calculates the loss for SPL training given the data and the labels.
-        Input:  labels -> tf.tensor[int], list of one hot labels associated
-                    with the data.
-                predicted_labels -> tf.tensor[int], list of one hot labels estimated
-                    by the model.
-        Output: loss_value -> tf.tensor[float32], calculated loss.
-        """
+        """ Calculates the loss for SPL training.
 
+        Input:  labels -> tf.tensor[int], list of one hot labels
+                    associated with the data.
+                predicted_labels -> tf.tensor[int], list of one hot
+                    labels estimated by the model.
+        Output: loss_value -> tf.tensor[float32], calculated loss.
+
+        """
         loss_object = tf.keras.losses.CategoricalCrossentropy(reduction=tf.keras.losses.Reduction.NONE)
 
         try:
@@ -431,14 +427,15 @@ class CustomModel(object):
 
     
     def assign(self, batch, reset=False):
-        """ Assigns the values to the threshold and the growth
-        rate for the SPL training or resets them.
-        Input:  batch -> tf.int32, batch number.
-                reset -> bool, resets the threshold and the 
-                    growth rate if True.
-        Output: 
-        """
+        """ Assigns the values to the threshold and the growth rate.
 
+        Function called at the end of each epoch during SPL training.
+        Input:  batch -> tf.int32, batch number.
+                reset -> bool, resets the threshold and the growth 
+                    rate if True.
+        Output: 
+
+        """
         if reset == True:
             # At the end of each epoch update threshold
             self.threshold.assign(self.threshold*self.growth_rate) # Update the threshold
@@ -450,41 +447,47 @@ class CustomModel(object):
 
        
     def test(self, test_data, test_labels, batch_size=32):
-        """ Tests the model with the given data.
+        """ Tests the model.
+
             Input:  test_data -> tf.tensor[float32], list
                         of examples.
                         First dimension, number of examples.
                         Second and third dimensions, image. 
                         Fourth dimension, color channel. 
-                    test_labels -> tf.tensor[int], list of one hot labels associated
-                        with the test data.
-                    batch_size -> int, number of examples used in a batch for the neural
-                        network.
-        """
+                    test_labels -> tf.tensor[int], list of one hot 
+                        labels associated with the test data.
+                    batch_size -> int, number of examples used in a 
+                        batch for the neural network.
+            Output:
 
+        """
         score = self.model.evaluate(test_data, test_labels, batch_size=batch_size)
         self.test_acc = np.append(self.test_acc, score[1])
 
 
 def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch_size=32, epochs=10):
-    """ Produces the optimal teaching set given the train_data and a lambda coefficiant. 
-    The search stops if the accuracy of the model is greater than target_acc. The indices
-    are saved to a file named by the user and returned as well.
+    """ Produces the optimal teaching set.
+
+    The search stops if the accuracy of the model is greater than 
+    target_acc. The indices are saved to a file named by the user and
+    returned as well.
     Input:  train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            train_labels -> tf.tensor[int], list of one hot labels associated
-                with the train data.
-            exp_rate -> int, coefficiant for the exponential distribution
+            train_labels -> tf.tensor[int], list of one hot labels
+                associated with the train data.
+            exp_rate -> int, coefficiant of the exponential distribution
                 for the thresholds.
-            target_acc -> float, accuracy at which to stop the algorithm. 
-            batch_size -> int, number of examples used in a batch for the neural
-                network.
-            epochs -> int, number of epochs for the training of the neural network.
-    Output: added_indices -> np.array[int], list of indices of selected  examples.
-    """
+            target_acc -> float, accuracy threshold. 
+            batch_size -> int, number of examples used in a batch for
+                the neural network.
+            epochs -> int, number of epochs for the training of the 
+                neural network.
+    Output: added_indices -> np.array[int], list of indices of selected
+                examples.
 
+    """
     rng = default_rng() # Set seed 
 
     # Get number of classes
@@ -556,8 +559,10 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9, batch
 
 
 def two_step_curriculum(data, labels):
-    """ Creates a curriculum dividing the data into easy and
-    hard examples taking into account the classes.
+    """ Creates a curriculum for training.
+
+    The examples in data are seperated into easy and hard examples
+    depending on their proximity to the average of their class.
     Input:  data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
@@ -566,8 +571,8 @@ def two_step_curriculum(data, labels):
                 associated with the data.
     Output: curriculum_indices -> list[np.array[int]], list of indices 
                 sorted from easy to hard.
-    """
 
+    """
     # Get number of classes
     max_class_nb = find_class_nb(labels)
 

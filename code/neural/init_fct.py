@@ -15,16 +15,18 @@ from misc_fct import *
 
 
 def rndm_init(labels):
-    """ Randomly selects the index of an example for each class. The label 
-    associated with the first class must be 0.
-    Input:  labels -> np.array[int] | tf.tensor[int], list of labels associated
-                with the data.
+    """ Selects the index of an example for each class.
+
+    The example chosen for each class is selected randomly.
+    The label associated with the first class must be 0.
+    Input:  labels -> np.array[int] | tf.tensor[int], list of labels
+                associated with the data.
                 First dimension, number of examples.
                 Second dimension, label | one hot label.
     Output: init_indices -> np.array[int], list of indices of the 
                 initial example to be used for each class.
-    """
 
+    """
     try:
         assert(len(labels.shape) == 1)
 
@@ -48,20 +50,23 @@ def rndm_init(labels):
 
 
 def nearest_avg_init(data, labels):
-    """ Selects the index of the example nearest to the average examples of 
-    each class. The label associated with the first class must be 0.
+    """ Selects the index of an example for each class.
+
+    The example chosen for each class is the one closest to the average
+    example of that class.
+    The label associated with the first class must be 0.
     Input:  data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            labels -> np.array[int] | tf.tensor[int], list of labels associated
-                with the data.
+            labels -> np.array[int] | tf.tensor[int], list of labels
+                associated with the data.
                 First dimension, number of examples.
                 Second dimension, label | one hot label.
     Output: init_indices -> np.array[int], list of indices of the 
                 initial example to be used for each class.
-    """
 
+    """
     try:
         assert(len(labels.shape) == 1)
 

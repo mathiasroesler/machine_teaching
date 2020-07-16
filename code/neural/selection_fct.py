@@ -3,7 +3,7 @@
 
 """
 Contains the functions for selection of misclassified examples
-Date: 25/5/2020
+Date: 16/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -15,16 +15,17 @@ from misc_fct import *
 
 
 def select_examples(missed_indices, thresholds, weights):
-    """ Selects the indices of the examples to be added to the teaching set where
-    the weight of the example is greater than its threshold.
-    Input:  missed_indices -> np.array[int], list of indices of missclassified
-                examples.
+    """ Selects the indices of the examples for the teaching set.
+
+    The indice is selected if its weight is greater then the threshold.
+    Input:  missed_indices -> np.array[int], list of indices of 
+                missclassified examples.
             thresholes -> np.array[int], threshold for each example.
             weights -> np.array[int], weight of each example.
-    Output: added_indices -> np.array[int], list of indices of examples to be 
-                added to the teaching set.
-    """
+    Output: added_indices -> np.array[int], list of indices of examples
+                to be added to the teaching set.
 
+    """
     added_indices = np.array([], dtype=np.intc)
 
     while np.sum(weights[missed_indices]) < 1:
@@ -35,14 +36,16 @@ def select_examples(missed_indices, thresholds, weights):
 
 
 def select_rndm_examples(missed_indices, max_nb):
-    """ Selects randomly the indices of the examples to be added to the teaching set.
-    Input:  missed_indices -> np.array[int], list of indices of missclassified
-                examples.
+    """ Selects the indices of the examples for the teaching set.
+    
+    The indices are selected randomly among the missclassified ones.
+    Input:  missed_indices -> np.array[int], list of indices of 
+                missclassified examples.
             max_nb -> int, maximal number of examples to add.
-    Output: added_indices -> np.array[int], list of indices of examples to be 
-                added to the teaching set.
-    """
+    Output: added_indices -> np.array[int], list of indices of examples
+                to be added to the teaching set.
 
+    """
     rng = default_rng() # Set random seed
 
     if len(missed_indices) > max_nb:
@@ -55,9 +58,14 @@ def select_rndm_examples(missed_indices, max_nb):
 
 
 def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positive_average, negative_average):
-    """ Selects the max_nb//2 positive examples nearest to the negative average and vice-versa. 
-    Input:  missed_indices -> np.array[int], list of indices of missclassified
-                examples.
+    """ Selects the indices of the examples for the teaching set.
+
+    The indices selected are the max//2 associated with positive
+    examples that are closest to the negative average example and the
+    max//2 negative examples that are closest to the positive average
+    example. For binary classification only.
+    Input:  missed_indices -> np.array[int], list of indices of
+                missclassified examples.
             max_nb -> int, maximal number of examples to add.
             train_ data -> tf.tensor[float32], list of examples.
                 First dimension, number of examples.
@@ -65,12 +73,14 @@ def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positi
                 Fourth dimension, color channel. 
             train_labels -> np.array[int], list of labels associated
                 with the train data.
-            positive_average -> tf.tensor[float32], average positive example.
-            negative_average -> tf.tensor[float32], average negative example.
-    Output: added_indices -> np.array[int], list of indices of examples to be 
-                added to the teaching set.
-    """
+            positive_average -> tf.tensor[float32], average positive 
+                example.
+            negative_average -> tf.tensor[float32], average negative 
+                example.
+    Output: added_indices -> np.array[int], list of indices of examples
+                to be added to the teaching set.
 
+    """
     # Extract misclassified examples and labels 
     missed_data = tf.gather(train_data, missed_indices, axis=0)
     missed_labels = tf.gather(train_labels, missed_indices, axis=0)

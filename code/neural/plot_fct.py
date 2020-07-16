@@ -3,7 +3,7 @@
 
 """
 Plot functions.
-Date: 01/7/2020
+Date: 16/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -17,14 +17,15 @@ from scipy.spatial import distance
 
 
 def plot_train_acc(acc_dict, plot_types):
-    """ Plots the evolution of the training accuracies for each strategy.
-    Input:  acc_dict -> dict(str: np.array[float32]), dictionnary of accuracies for
-                each strategy.
-            plot_types -> list[str], list of plot color and type for each
-                strategy.
-    Output:
-    """
+    """ Plots the training accuracies for each strategy.
 
+    Input:  acc_dict -> dict(str: np.array[float32]), dictionnary of
+                accuracies for each strategy.
+            plot_types -> list[str], list of plot color and type
+                for each strategy.
+    Output:
+
+    """
     try:
         assert(len(acc_dict) == len(plot_types)) 
 
@@ -48,13 +49,13 @@ def plot_train_acc(acc_dict, plot_types):
 
 
 def plot_test_acc(acc_dict):
-    """ Plots the comparaison of the test accuracies for each 
-    strategy using plot boxes.
-    Input:  acc_list -> dict(str:np.array[float32]), dictionnary of accuracies for
-                each strategy.
-    Output:
-    """
+    """ Plots the comparaison of the test accuracies for each strategy.
 
+    Input:  acc_list -> dict(str:np.array[float32]), dictionnary of
+                accuracies for each strategy.
+    Output:
+
+    """
     plt.boxplot(list(acc_dict.values()), labels=list(acc_dict.keys()))
 
     plt.show()
@@ -62,15 +63,16 @@ def plot_test_acc(acc_dict):
 
 def plot_losses(train_loss_dict, val_loss_dict, plot_types):
     """ Plots the train and validation losses.
+
     Input:  train_loss_dict -> dict(str:np.array[float32]), dictionnary
                 of the training loss for each strategy.
             val_loss_dict -> dict(str:np.array[float32]), dictionnary
                 of the validation loss for each strategy.
-            plot_types -> list[str], list of plot color and type for each
-                strategy.
+            plot_types -> list[str], list of plot color and type for
+                each strategy.
     Output:
-    """
 
+    """
     try:
         assert(len(train_loss_dict) == len(val_loss_dict) == len(plot_types)) 
         assert(train_loss_dict.keys() == val_loss_dict.keys())

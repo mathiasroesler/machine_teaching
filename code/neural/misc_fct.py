@@ -3,7 +3,7 @@
 
 """
 Miscellaneous functions.
-Date: 12/7/2020
+Date: 16/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -13,15 +13,17 @@ import tensorflow as tf
 
 
 def find_indices(labels):
-    """ Returns the indices for the examples of each class given
-    the labels. The label of the first class must be 0.
-    Input:  labels -> tf.tensor[int] | np.array[int], list of labels 
+    """ Returns the indices for the examples of each class.
+
+    The label of the first class must be 0.
+    Input:  labels -> tf.tensor[int] | np.array[int], list of labels
                 associated with the data.
                 First dimension, number of examples.
                 Second dimension, one hot label | label.
-    Output: indices -> list[np.array[int]], list of indices for each class. 
-    """
+    Output: indices -> list[np.array[int]], list of indices for each
+                class. 
 
+    """
     try:
         assert(len(labels.shape) == 1)
 
@@ -42,14 +44,15 @@ def find_indices(labels):
 
 
 def find_examples(data, labels):
-    """ Returns the examples for each class given a data set
-    and the associated labels. The label of the first class must be 0.
+    """ Returns the examples for each class.
+
+    The label of the first class must be 0.
     Input:  data -> tf.tensor[float32], list of examples.
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            labels -> tf.tensor[int] | np.array[int], list of labels associated
-                with the data.
+            labels -> tf.tensor[int] | np.array[int], list of labels 
+                associated with the data.
                 First dimension, number of examples.
                 Second dimension, one hot label | label.
     Output: examples -> list[tf.tensor[float32]], list of examples.
@@ -57,8 +60,8 @@ def find_examples(data, labels):
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-    """
 
+    """
     try:
         assert(len(labels.shape) == 1)
 
@@ -80,14 +83,16 @@ def find_examples(data, labels):
 
 
 def find_class_nb(labels):
-    """ Finds the highest class number. The first class must be 0.
-    Input:  labels -> tf.tensor[int] | np.array[int], list of labels associated
-                with the data.
+    """ Finds the highest class number.
+
+    The first class must be 0.
+    Input:  labels -> tf.tensor[int] | np.array[int], list of labels
+                associated with the data.
                 First dimension, number of examples.
                 Second dimension, one hot label | label.
     Output: class_nb -> int, number of classes.
-    """
 
+    """
     try:
         assert(len(labels.shape) == 1)
 
@@ -101,22 +106,23 @@ def find_class_nb(labels):
 
 
 def average_examples(data, labels):
-    """ Calculates the average examples for each class given
-    the train data and labels. The label of the first class must be 0.
+    """ Calculates the average examples for each class.
+
+    The label of the first class must be 0.
     Input:  data -> tf.tensor[float32], list of examples.
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-            labels -> tf.tensor[int] | np.array[int], list of labels associated
-                with the data.
+            labels -> tf.tensor[int] | np.array[int], list of labels
+                associated with the data.
                 First dimension, number of examples.
                 Second dimension, one hot label | label.
     Output: average_data -> tf.tensor[float32], average examples.
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
-    """
 
+    """
     try:
         assert(len(labels.shape) == 1)
 
@@ -138,16 +144,17 @@ def average_examples(data, labels):
 
 
 def display(acc_list, display_labels, times):
-    """ Displays the test accuracies and the times.
+    """ Displays the results of the trainings. 
+
     Input:  acc_list -> list[float32], list of test accuracies for
                 each strategy.
-            display_labels -> list[str], list of labels associated with each
-                strategy.
-            times -> np.array[float32], list of times associated with each
-                strategy.
+            display_labels -> list[str], list of labels associated with
+                each strategy.
+            times -> np.array[float32], list of times associated with
+                each strategy.
     Output:
-    """
 
+    """
     try:
         assert(len(acc_list) == len(display_labels) == len(times))
 
@@ -172,12 +179,13 @@ def display(acc_list, display_labels, times):
 
 
 def update_dict(dict_array, new_array):
-    """ Updates the dictionnary array with the results of a new iteration.
+    """ Updates the dictionnary array with the new results
+
     Input:  dict_array -> np.array[np.float32], array to be updated.
             new_array -> np.array[np.float32], array to be added.
     Output: updated_array -> np.array[np.float32], updated array.
-    """
 
+    """
     if len(new_array) > len(dict_array):
         updated_array = new_array
         updated_array[:len(dict_array)] += dict_array

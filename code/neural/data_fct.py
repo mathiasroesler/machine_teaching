@@ -3,7 +3,7 @@
 
 """
 Contains the functions to manipulate the data.
-Date: 11/7/2020
+Date: 16/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -15,10 +15,10 @@ from numpy.random import default_rng
 
 def extract_data(data_name):
     """ Extracts the data from tensorflow datasets.
+
     Input:  data_name -> str {'cifar', 'mnist'}, name of the data
             to extract.
-    Output: train_data -> tf.tensor[float32], list
-                of examples. 
+    Output: train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
                 Fourth dimension, color channel. 
@@ -31,8 +31,8 @@ def extract_data(data_name):
                 with the train examples.
             test_labels -> np.array[int], list of labels associated
                 with the test examples.
-    """
 
+    """
     try:
         assert(data_name == 'cifar' or data_name == 'mnist')
 
@@ -55,14 +55,16 @@ def extract_data(data_name):
 
 
 def prep_labels(labels, class_nb=0):
-    """ Prepares the labels for a one vs all strategy given a class.
+    """ Prepares the labels for a one vs all strategy.
+
     The first class must be 0.
     Input:  labels -> np.array[int], list of labels.
-            class_nb -> int, desired class to be classified vs the others.
+            class_nb -> int, desired class to be classified
+                against the others.
     Output: labels -> np.array[int], list of labels modified for
                 one vs all strategy.
-    """
 
+    """
     try:
         assert(isinstance(class_nb, int))
         assert(class_nb >= 0)
@@ -81,23 +83,24 @@ def prep_labels(labels, class_nb=0):
 
 def prep_data(data):
     """ Normalizes the data.
-    Input:  data -> tf.tensor[float32], list
-                of examples.
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-    Output: norm_data -> tf.tensor[float32], list
-                of normalized examples.
-                First dimension, number of examples.
-                Second and third dimensions, image. 
-                Fourth dimension, color channel. 
-    """
 
+    Input:  data -> tf.tensor[float32], list of examples.
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+    Output: norm_data -> tf.tensor[float32], list of normalized
+                examples.
+                First dimension, number of examples.
+                Second and third dimensions, image. 
+                Fourth dimension, color channel. 
+
+    """
     return tf.cast(data/255, dtype=tf.float32)
 
 
 def split_data(train_set, optimal_indices):
     """ Divides the train set into a validation set and a train set. 
+
     The validation set is composed of a tenth of the train set, the
     examples are chosen so that they are not in the optimal set. The
     validation set can be used for both sets.
@@ -109,19 +112,18 @@ def split_data(train_set, optimal_indices):
                 the optimal examples in the train set.
     Output: reduced_set -> tuple(tf.tensor[float32], tf.tensor[int]),
                 train data and labels.    
-                of examples. 
                 First dimension, examples.
                 Second dimension, labels
-            optimal_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation
-                data and labels.
+            optimal_set -> tuple(tf.tensor[float32], tf.tensor[int]),
+                validation data and labels.
                 First dimension, examples.
                 Second dimension, labels.
-            val_set -> tuple(tf.tensor[float32], tf.tensor[int]), validation
-                data and labels.
+            val_set -> tuple(tf.tensor[float32], tf.tensor[int]), 
+                validation data and labels.
                 First dimension, examples.
                 Second dimension, labels.
-    """
 
+    """
     rng = default_rng(120) # Set seed 
     example_nb = train_set[1].shape[0]
 
