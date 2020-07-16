@@ -30,7 +30,8 @@ def select_examples(missed_indices, thresholds, weights):
 
     while np.sum(weights[missed_indices]) < 1:
         weights[missed_indices] = 2*weights[missed_indices]
-        added_indices = np.nonzero(weights[missed_indices] >= thresholds[missed_indices])[0]
+        added_indices = np.nonzero(weights[missed_indices] >= thresholds[
+            missed_indices])[0]
 
     return added_indices
 
@@ -57,7 +58,8 @@ def select_rndm_examples(missed_indices, max_nb):
     return added_indices
 
 
-def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positive_average, negative_average):
+def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels,
+        positive_average, negative_average):
     """ Selects the indices of the examples for the teaching set.
 
     The indices selected are the max//2 associated with positive
@@ -102,15 +104,19 @@ def select_min_avg_dist(missed_indices, max_nb, train_data, train_labels, positi
         negative_indices = np.argsort(negative_dist, axis=0)[:max_nb//2]
 
     try:
-        added_indices = np.concatenate((np.squeeze(missed_indices[positive_indices]), np.squeeze(missed_indices[negative_indices])), axis=0)
+        added_indices = np.concatenate((np.squeeze(missed_indices[
+            positive_indices]), np.squeeze(missed_indices[negative_indices])),
+            axis=0)
 
     except ValueError:
         if len(positive_indices) != 1: 
             # If negative_indices is a scalar
-            added_indices = np.concatenate((np.squeeze(positive_indices), negative_indices), axis=0)
+            added_indices = np.concatenate((np.squeeze(positive_indices),
+                negative_indices), axis=0)
 
         else:
             # If positive_indices is a scalar
-            added_indices = np.concatenate((positive_indices, np.squeeze(negative_indices)), axis=0)
+            added_indices = np.concatenate((positive_indices, np.squeeze(
+                negative_indices)), axis=0)
 
     return added_indices

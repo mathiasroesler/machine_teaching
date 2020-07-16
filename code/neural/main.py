@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     # Variables for neural networks
     archi_type = 1
-    epochs = 10
+    epochs = 2
     batch_size = 128
 
     # Variables for plotting
@@ -61,8 +61,8 @@ if __name__ == "__main__":
 
     # Other variables
     strat_names = ["Full", "MT", "CL", "SPL"]
-    class_nb = -1
-    iteration_nb = 3
+    class_nb = -1    # Class number for one vs all
+    iteration_nb = 3 # Number of times the model learns
 
     # Dictionnaries 
     time_dict = dict()
@@ -77,8 +77,10 @@ if __name__ == "__main__":
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
 
     if class_nb != -1:
-        train_labels = tf.keras.utils.to_categorical(prep_labels(train_labels, class_nb=class_nb), 2)
-        test_labels = tf.keras.utils.to_categorical(prep_labels(test_labels, class_nb=class_nb), 2)
+        train_labels = tf.keras.utils.to_categorical(
+                prep_labels(train_labels, class_nb=class_nb), 2)
+        test_labels = tf.keras.utils.to_categorical(
+                prep_labels(test_labels, class_nb=class_nb), 2)
 
     else:
         train_labels = tf.keras.utils.to_categorical(train_labels, 10)
@@ -90,10 +92,12 @@ if __name__ == "__main__":
         optimal_indices = np.load(file_name)
 
     except FileNotFoundError:
-        optimal_indices = create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.95, batch_size=batch_size, epochs=2)
+        optimal_indices = create_teacher_set(train_data, train_labels,
+                exp_rate, target_acc=0.95, batch_size=batch_size, epochs=2)
 
     # Create data sets
-    train_set, optimal_set, val_set = split_data((train_data, train_labels), optimal_indices)
+    train_set, optimal_set, val_set = split_data((train_data, train_labels),
+            optimal_indices)
     train_data = train_set[0]
     train_labels = train_set[1]
     optimal_data = optimal_set[0]
@@ -107,7 +111,8 @@ if __name__ == "__main__":
         # Initialize dictionaries
         time_dict[strat] = 0
         train_acc_dict[strat] = [0]
-        model_dict[strat] = CustomModel(data_shape, max_class_nb, archi_type, warm_up, threshold, growth_rate)
+        model_dict[strat] = CustomModel(data_shape, max_class_nb, archi_type,
+                warm_up, threshold, growth_rate)
         train_loss_dict[strat] = [0]
         val_loss_dict[strat] = [0]
         normalizer_dict[strat] = [0]
@@ -124,10 +129,12 @@ if __name__ == "__main__":
             print("\n"+ strat+" training")
 
             if strat == "MT":
-                model.train(optimal_data, optimal_labels, val_set, strat, epochs, batch_size)
+                model.train(optimal_data, optimal_labels, val_set, strat,
+                        epochs, batch_size)
 
             else:
-                model.train(train_data, train_labels, val_set, strat, epochs, batch_size)
+                model.train(train_data, train_labels, val_set, strat, epochs,
+                        batch_size)
 
             toc = time.time()
 
@@ -135,10 +142,14 @@ if __name__ == "__main__":
             model.test(test_data, test_labels)
 
             # Save accuracy, losses and time
-            train_acc_dict.update({strat: update_dict(train_acc_dict.get(strat), model.train_acc)})
-            train_loss_dict.update({strat: update_dict(train_loss_dict.get(strat), model.train_loss)})
-            val_loss_dict.update({strat: update_dict(val_loss_dict.get(strat), model.val_loss)})
-            normalizer_dict.update({strat: update_dict(normalizer_dict.get(strat), np.ones(len(model.train_acc)))})
+            train_acc_dict.update({strat: update_dict(
+                train_acc_dict.get(strat), model.train_acc)})
+            train_loss_dict.update({strat: update_dict(
+                train_loss_dict.get(strat), model.train_loss)})
+            val_loss_dict.update({strat: update_dict(
+                val_loss_dict.get(strat), model.val_loss)})
+            normalizer_dict.update({strat: update_dict(
+                normalizer_dict.get(strat), np.ones(len(model.train_acc)))})
             time_dict.update({strat: time_dict.get(strat) + toc-tic})
 
             # Reset model
@@ -146,10 +157,14 @@ if __name__ == "__main__":
 
     # Average time, accuracies and losses
     for strat in strat_names:
-        train_acc_dict.update({strat: np.round(train_acc_dict.get(strat)/iteration_nb, decimals=2)})
-        time_dict.update({strat: np.round(time_dict.get(strat)/iteration_nb, decimals=2)})
-        train_loss_dict.update({strat: np.round(train_loss_dict.get(strat)/iteration_nb, decimals=2)})
-        val_loss_dict.update({strat: np.round(val_loss_dict.get(strat)/iteration_nb, decimals=2)})
+        train_acc_dict.update({strat: np.round(
+            train_acc_dict.get(strat)/iteration_nb, decimals=2)})
+        time_dict.update({strat: np.round(
+            time_dict.get(strat)/iteration_nb, decimals=2)})
+        train_loss_dict.update({strat: np.round(
+            train_loss_dict.get(strat)/iteration_nb, decimals=2)})
+        val_loss_dict.update({strat: np.round(
+            val_loss_dict.get(strat)/iteration_nb, decimals=2)})
         test_acc_dict[strat] = model_dict.get(strat).test_acc
 
     # Save results in file

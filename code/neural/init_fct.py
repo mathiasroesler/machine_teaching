@@ -39,8 +39,8 @@ def rndm_init(labels):
     rng = default_rng() # Set seed 
 
     max_class_nb = np.max(labels)
-    indices = find_indices(labels) # List of example indices for each class
-    init_indices = np.zeros(max_class_nb+1, dtype=np.intc) # List of initial examples indices
+    indices = find_indices(labels)  
+    init_indices = np.zeros(max_class_nb+1, dtype=np.intc) 
 
     for i in range(max_class_nb+1):
         # Randomly select an index for each class
@@ -77,14 +77,14 @@ def nearest_avg_init(data, labels):
             labels = np.argmax(labels, axis=1)
 
     max_class_nb = np.max(labels)
-    indices = find_indices(labels)             # List of example indices for each class
-    examples = find_examples(data, labels)     # List of examples for each class
-    averages = average_examples(data, labels)  # List of average example for each class
-    init_indices = np.zeros(max_class_nb+1, dtype=np.intc) # List of initial examples indices
+    indices = find_indices(labels)
+    examples = find_examples(data, labels) 
+    averages = average_examples(data, labels)
+    init_indices = np.zeros(max_class_nb+1, dtype=np.intc)
 
     for i in range(max_class_nb+1):
         # Select nearest example for each class
-        dist = tf.norm(averages[i]-examples[i], axis=(1, 2)) # Estimate distance to average
+        dist = tf.norm(averages[i]-examples[i], axis=(1, 2)) 
 
         init_indices[i] = indices[i][np.argmin(np.mean(dist, axis=1))]
 

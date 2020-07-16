@@ -137,7 +137,6 @@ def average_examples(data, labels):
     examples = find_examples(data, labels)
 
     for i in range(nb_classes):
-        # Calculate the mean for each class
         averages[i] = np.mean(examples[i], axis=0) 
 
     return tf.stack(averages)
@@ -159,7 +158,8 @@ def display(acc_list, display_labels, times):
         assert(len(acc_list) == len(display_labels) == len(times))
 
     except AssertionError:
-        print("Error in function display: the inputs must all have the same dimension.")
+        print("Error in function display: the inputs must all have the same "
+                "dimension.")
         exit(1)
 
     # Get longest label for justification
@@ -173,7 +173,8 @@ def display(acc_list, display_labels, times):
 
     for i in range(len(acc_list)):
         label_str = display_labels[i].ljust(max_label_len, " ") + " |" 
-        acc_str = str(np.round(acc_list[i], 4)).ljust(len("test accuracies"), " ") + " |"
+        acc_str = str(np.round(acc_list[i], 4)).ljust(len("test accuracies"),
+                " ") + " |"
         
         print(label_str, acc_str, "%.2f" % times[i], "s")
 

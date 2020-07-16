@@ -37,21 +37,28 @@ def extract_data(data_name):
         assert(data_name == 'cifar' or data_name == 'mnist')
 
     except AssertionError:
-        print("Error in function extract_data: the data name must be cifar or mnist")
+        print("Error in function extract_data: the data name must be cifar or "
+                "mnist")
         exit(1)
 
     if data_name == 'cifar':
         # Extract cifar10 data and labels
-        (train_data, train_labels), (test_data, test_labels) = tf.keras.datasets.cifar10.load_data()
+        (train_data, train_labels), (test_data, test_labels) = tf.keras.\
+                datasets.cifar10.load_data()
 
     else:
         # Extract mnist data and labels and reshape
-        (train_data, train_labels), (test_data, test_labels) = tf.keras.datasets.mnist.load_data()
-        train_data = tf.reshape(train_data, (train_data.shape[0], train_data.shape[1], train_data.shape[2], 1))
-        test_data = tf.reshape(test_data, (test_data.shape[0], test_data.shape[1], test_data.shape[2], 1))
+        (train_data, train_labels), (test_data, test_labels) = tf.keras.\
+                datasets.mnist.load_data()
+        train_data = tf.reshape(train_data, (train_data.shape[0], 
+            train_data.shape[1], train_data.shape[2], 1))
+        test_data = tf.reshape(test_data, (test_data.shape[0], 
+            test_data.shape[1], test_data.shape[2], 1))
 
-    return prep_data(train_data[:20000]), prep_data(test_data[:4000]), train_labels[:20000], test_labels[:4000]
-    #return prep_data(train_data), prep_data(test_data), train_labels, test_labels
+    return prep_data(train_data[:20000]), prep_data(test_data[:4000]), \
+            train_labels[:20000], test_labels[:4000]
+    #return prep_data(train_data), prep_data(test_data), train_labels, \
+    #        test_labels
 
 
 def prep_labels(labels, class_nb=0):
@@ -71,7 +78,8 @@ def prep_labels(labels, class_nb=0):
         assert(np.max(labels) > class_nb)
 
     except AssertionError:
-        print("Error in function prep_labels: class_nb must be a positive integer less then the number of classes.")
+        print("Error in function prep_labels: class_nb must be a positive "
+                "integer less then the number of classes.")
         exit(1)
 
     # Convert to two labels given the class number
@@ -143,4 +151,5 @@ def split_data(train_set, optimal_indices):
     reduced_train_data = tf.gather(train_set[0], train_indices)
     reduced_train_labels = tf.gather(train_set[1], train_indices)
 
-    return (reduced_train_data, reduced_train_labels), (optimal_data, optimal_labels), (val_data, val_labels)
+    return (reduced_train_data, reduced_train_labels), (optimal_data, 
+            optimal_labels), (val_data, val_labels)

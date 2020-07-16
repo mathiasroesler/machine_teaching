@@ -32,7 +32,8 @@ def plot_train_acc(acc_dict, plot_types):
         assert(len(acc_dict) == len(plot_types)) 
 
     except AssertionError:
-        print("Error in function plot_train_acc: the inputs must all have the same dimension.")
+        print("Error in function plot_train_acc: the inputs must all have the "
+                "same dimension.")
         exit(1)
 
     strategy_nb = len(acc_dict)
@@ -80,23 +81,26 @@ def plot_losses(train_loss_dict, val_loss_dict, plot_types):
         assert(train_loss_dict.keys() == val_loss_dict.keys())
 
     except AssertionError:
-        print("Error in function plot_losses: the inputs must all have the same dimension and the dictionnaries must have the same keys.")
+        print("Error in function plot_losses: the inputs must all have the "
+                "same dimension and the dictionnaries must have the same keys.")
         exit(1)
 
     i = 0
 
     for key in train_loss_dict.keys():
         plt.figure()
-        plt.plot(range(1, len(train_loss_dict.get(key))+1), train_loss_dict.get(key), plot_types[i], label="Train "+key)
-        plt.plot(range(1, len(val_loss_dict.get(key))+1), val_loss_dict.get(key), plot_types[i]+'-', label="Validation "+key)
+        plt.plot(range(1, len(train_loss_dict.get(key))+1), 
+                train_loss_dict.get(key), plot_types[i], label="Train "+key)
+        plt.plot(range(1, len(val_loss_dict.get(key))+1), 
+                val_loss_dict.get(key), plot_types[i]+'-', 
+                label="Validation "+key)
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.legend()
-        plt.grid(True, which="both") # Add grid
+        plt.grid(True, which="both")
 
         i+=1
 
-    
     plt.show() 
     
 #######################################################################
