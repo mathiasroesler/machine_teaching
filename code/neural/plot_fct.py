@@ -8,6 +8,8 @@ Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
+import sys
+import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -96,3 +98,48 @@ def plot_losses(train_loss_dict, val_loss_dict, plot_types):
 
     
     plt.show() 
+    
+#######################################################################
+
+if __name__ == "__main__":
+
+    if len(sys.argv) != 2:
+        print("usage: plot.py filename")
+        exit(1)
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    filename = dir_path+ "/" + sys.argv[1]
+
+    try:
+        assert(os.path.isfile(filename))
+
+    except AssertionError:
+        print("Error: the selected file was not found")
+        exit(1)
+
+    dict_list = []
+    string = ""
+    plot_types = ['r-', 'b-', 'g-', 'k-']
+
+    with open(filename, "r") as f:
+        for line in f:
+            new_line = line.replace("array", "np.array")
+
+
+            if new_line[-2] != '}':
+                string = string + new_line.strip('\n')
+
+            elif string != "":
+                string = string + new_line.strip('\n')
+                dict_list.append(eval(string))
+                string = ""
+            
+            else:
+                dict_list.append(eval(new_line))
+
+    if len(dict_list[1]) == 1:
+        plot_types = ['r-']
+
+    plot_train_acc(dict_list[1], plot_types)
+    plot_test_acc(dict_list[2])
+    plot_losses(dict_list[3], dict_list[4], plot_types)

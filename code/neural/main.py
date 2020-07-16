@@ -3,23 +3,45 @@
 
 """
 Main program.
-Date: 11/7/2020
+Date: 16/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
 import time
+import sys
+import os
 from data_fct import *
 from misc_fct import *
 from plot_fct import *
 from custom_model import * 
 
 
-def main(data_name):
-    """ Main function. 
-    Input:  data_name -> str {'mnist', 'cifar'}, name of the dataset
-            to use.
+if __name__ == "__main__":
+    """ Main function.
+
+    Two databases are available, mnist and cifar.
+    Input:  database -> str, name of the database used.
+            filename -> str, file used for saving results.
+    Output: 
+
     """
+    if len(sys.argv) != 3:
+        print("usage: main.py database filename")
+        exit(1)
+
+    data_name = sys.argv[1]
+
+    try:
+        # Check that the database is correct
+        assert(data_name == 'cifar' or data_name == 'mnist')
+
+    except AssertionError:
+        print("Error: the data name must be cifar or mnist.")
+        exit(1)
+
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    filename = dir_path+ "/" + sys.argv[2]
 
     # Variables for machine teaching
     exp_rate = 150
@@ -124,24 +146,16 @@ def main(data_name):
 
     # Average time, accuracies and losses
     for strat in strat_names:
-        time_dict.update({strat: time_dict.get(strat)/normalizer_dict.get(strat)})
-        train_acc_dict.update({strat: train_acc_dict.get(strat)/normalizer_dict.get(strat)})
-        train_loss_dict.update({strat: train_loss_dict.get(strat)/normalizer_dict.get(strat)})
-        val_loss_dict.update({strat: val_loss_dict.get(strat)/normalizer_dict.get(strat)})
+        train_acc_dict.update({strat: np.round(train_acc_dict.get(strat)/iteration_nb, decimals=2)})
+        time_dict.update({strat: np.round(time_dict.get(strat)/iteration_nb, decimals=2)})
+        train_loss_dict.update({strat: np.round(train_loss_dict.get(strat)/iteration_nb, decimals=2)})
+        val_loss_dict.update({strat: np.round(val_loss_dict.get(strat)/iteration_nb, decimals=2)})
         test_acc_dict[strat] = model_dict.get(strat).test_acc
 
-    # Plot results
-    plot_train_acc(train_acc_dict, plot_types)
-    plot_test_acc(test_acc_dict)
-    plot_losses(train_loss_dict, val_loss_dict, plot_types)
-
-    
-print("Select cifar or mnist:")
-data_name = input().rstrip()
-
-while data_name != "cifar" and data_name != "mnist":
-    print("Select cifar or mnist:")
-    data_name = input().rstrip()
-
-main(data_name)
-
+    # Save results in file
+    with open(filename, 'w') as f:
+        f.write(str(time_dict) + '\n')
+        f.write(str(train_acc_dict) + '\n')
+        f.write(str(test_acc_dict) + '\n')
+        f.write(str(train_loss_dict) + '\n')
+        f.write(str(val_loss_dict) + '\n')
