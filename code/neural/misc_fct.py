@@ -180,7 +180,7 @@ def display(acc_list, display_labels, times):
 
 
 def update_dict(dict_array, new_array):
-    """ Updates the dictionnary array with the new results
+    """ Updates the dictionnary array with the new results.
 
     Input:  dict_array -> np.array[np.float32], array to be updated.
             new_array -> np.array[np.float32], array to be added.

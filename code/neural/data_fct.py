@@ -111,7 +111,8 @@ def split_data(train_set, optimal_indices):
 
     The validation set is composed of a tenth of the train set, the
     examples are chosen so that they are not in the optimal set. The
-    validation set can be used for both sets.
+    selected examples are removed from the train set. The validation
+    set can be used for both sets.
     Input:  train_set -> tuple(tf.tensor[float32], tf.tensor[int]),
                 train data and labels.
                 First dimension, examples.

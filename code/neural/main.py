@@ -52,19 +52,19 @@ if __name__ == "__main__":
     growth_rate = 1.3
 
     # Variables for neural networks
-    archi_type = 1
-    epochs = 10
+    archi_type = 3
+    epochs = 2
     batch_size = 128
 
     # Variables for plotting
     plot_types = ['ro-', 'bo-', 'go-', 'ko-']
 
     # Other variables
-    strat_names = ["CL"]#["Full", "MT", "CL", "SPL"]
-    iteration_nb = 3 
+    strat_names = ["Full", "MT", "CL", "SPL"]
+    iteration_nb = 1 
     class_nb = -1  # Class number for one vs all
     sparse = False  # If labels are to be sparse or not
-    verbose = 2  # Verbosity for learning
+    verbose = 1  # Verbosity for learning
 
     # Dictionnaries 
     time_dict = dict()
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
 
     try:
-        assert(not sparse)
+        assert(sparse)
 
     except AssertionError:
         # Convert the labels to one hot
@@ -125,7 +125,7 @@ if __name__ == "__main__":
         normalizer_dict[strat] = np.zeros(epochs)
 
     for i in range(iteration_nb):
-        print("\nITERATION", i+1)
+        print("\nITERATION {}".format(i+1))
 
         for strat in strat_names:
             # For each strategy 
@@ -133,7 +133,7 @@ if __name__ == "__main__":
             tic = time.time()
 
             # Train model
-            print("\n"+ strat+" training")
+            print("\n{} training".format(strat))
 
             if strat == "MT":
                 model.train(optimal_data, optimal_labels, val_set, strat,

@@ -24,7 +24,7 @@ class CustomModel(object):
     """ Custom neural network class. """
 
 
-    def __init__(self, data_shape, class_nb, archi_type=1, warm_up=5,
+    def __init__(self, data_shape, class_nb, archi_type=1, warm_up=50,
             threshold_value=0.4, growth_rate_value=1.1):
         """ Initializes the model.
 
@@ -35,7 +35,7 @@ class CustomModel(object):
                 archi_type -> int, selects the architecture,
                     default value 1.
                 warm_up -> int, batch number after which the model is
-                    "warmed up", default value 5.
+                    "warmed up", default value 50.
                 threshold_value -> float32, initial value for SPL 
                     threshold, default value 0.4.
                 growth_rate_value -> float32, initial value for SPL 
@@ -616,7 +616,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
 
         ite += 1
 
-    print("\nIteration number:", ite)
+    print("\nIteration number: {}".format(ite))
     print("Select name to save data to:")
     data_name = input().rstrip()
 
