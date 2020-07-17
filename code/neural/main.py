@@ -53,14 +53,14 @@ if __name__ == "__main__":
 
     # Variables for neural networks
     archi_type = 1
-    epochs = 2
+    epochs = 10
     batch_size = 128
 
     # Variables for plotting
     plot_types = ['ro-', 'bo-', 'go-', 'ko-']
 
     # Other variables
-    strat_names = ["Full", "MT", "CL", "SPL"]
+    strat_names = ["CL"]#["Full", "MT", "CL", "SPL"]
     iteration_nb = 3 
     class_nb = -1  # Class number for one vs all
     sparse = False  # If labels are to be sparse or not
@@ -117,12 +117,12 @@ if __name__ == "__main__":
     for strat in strat_names:
         # Initialize dictionaries
         time_dict[strat] = 0
-        train_acc_dict[strat] = [0]
+        train_acc_dict[strat] = np.zeros(epochs)
         model_dict[strat] = CustomModel(data_shape, max_class_nb, archi_type,
                 warm_up, threshold, growth_rate)
-        train_loss_dict[strat] = [0]
-        val_loss_dict[strat] = [0]
-        normalizer_dict[strat] = [0]
+        train_loss_dict[strat] = np.zeros(epochs)
+        val_loss_dict[strat] = np.zeros(epochs)
+        normalizer_dict[strat] = np.zeros(epochs)
 
     for i in range(iteration_nb):
         print("\nITERATION", i+1)
@@ -148,15 +148,15 @@ if __name__ == "__main__":
             # Test model
             model.test(test_data, test_labels)
 
-            # Save accuracy, losses and time
+            # Save accuracy, losses and 
             train_acc_dict.update({strat: update_dict(
                 train_acc_dict.get(strat), model.train_acc)})
             train_loss_dict.update({strat: update_dict(
                 train_loss_dict.get(strat), model.train_loss)})
             val_loss_dict.update({strat: update_dict(
                 val_loss_dict.get(strat), model.val_loss)})
-            normalizer_dict.update({strat: update_dict(
-                normalizer_dict.get(strat), np.ones(len(model.train_acc)))})
+            normalizer_dict.get(strat)[np.argwhere(train_acc_dict.get(
+                strat))] += 1
             time_dict.update({strat: time_dict.get(strat) + toc-tic})
 
             # Reset model
@@ -164,14 +164,20 @@ if __name__ == "__main__":
 
     # Average time, accuracies and losses
     for strat in strat_names:
-        train_acc_dict.update({strat: np.round(
-            train_acc_dict.get(strat)/iteration_nb, decimals=2)})
         time_dict.update({strat: np.round(
             time_dict.get(strat)/iteration_nb, decimals=2)})
+        train_acc_dict.update({strat: np.round(
+            train_acc_dict.get(strat)[train_acc_dict.get(strat) != 0] / 
+            normalizer_dict.get(strat)[normalizer_dict.get(strat) != 0],
+            decimals=2)})
         train_loss_dict.update({strat: np.round(
-            train_loss_dict.get(strat)/iteration_nb, decimals=2)})
+            train_loss_dict.get(strat)[train_loss_dict.get(strat) != 0] /
+            normalizer_dict.get(strat)[normalizer_dict.get(strat) != 0],
+            decimals=2)})
         val_loss_dict.update({strat: np.round(
-            val_loss_dict.get(strat)/iteration_nb, decimals=2)})
+            val_loss_dict.get(strat)[val_loss_dict.get(strat) != 0] /
+            normalizer_dict.get(strat)[normalizer_dict.get(strat) != 0],
+            decimals=2)})
         test_acc_dict[strat] = model_dict.get(strat).test_acc
 
     # Save results in file

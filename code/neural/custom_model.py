@@ -174,9 +174,8 @@ class CustomModel(object):
 
 
     def reset_model(self, input_shape, archi_type=1):
-        """ Resets attributes of the model.
+        """ Resets the weights of the model.
 
-        The model is recreated and the accuracies and losses are reset.
         The architecture depends on the variable archi_type.
         1 for LeNet5, 2 for All-CNN, 3 for CNN.
         Input:  input_shape -> tuple[int], shape of the input data. 
@@ -188,12 +187,6 @@ class CustomModel(object):
         # Reset weigths
         self.model = self.set_model(input_shape, archi_type)
 
-        # Reset accuracies and losses
-        self.train_acc = np.array([], dtype=np.float32)
-        self.val_acc = np.array([], dtype=np.float32)
-        self.train_loss = np.array([], dtype=np.float32)
-        self.val_loss = np.array([], dtype=np.float32)
-    
 
     def train(self, train_data, train_labels, val_set, strategy, epochs=10,
             batch_size=32, verbose=0):
@@ -242,6 +235,12 @@ class CustomModel(object):
             # If the labels are not one hot
             self.loss_function = tf.keras.losses.SparseCategoricalCrossentropy(
                     from_logits=True)
+
+        # Initialize arrays
+        self.train_acc = np.zeros(epochs, dtype=np.float32)
+        self.train_loss = np.zeros(epochs, dtype=np.float32)
+        self.val_acc = np.zeros(epochs, dtype=np.float32)
+        self.val_loss = np.zeros(epochs, dtype=np.float32)
 
         if strategy == "MT" or strategy == "Full":
             self.simple_train(train_data, train_labels, val_set, epochs,
@@ -356,24 +355,29 @@ class CustomModel(object):
                 monitor='val_loss', patience=1)
 
         curriculum_indices = two_step_curriculum(train_data, train_labels)
+        curriculum_len = len(curriculum_indices)
+        half_epoch = epochs//curriculum_len
 
         # Train model with easy then hard examples
-        for i in range(len(curriculum_indices)):
+        for i in range(curriculum_len):
             hist = self.model.fit(
                     tf.gather(train_data, curriculum_indices[i]),
                     tf.gather(train_labels, curriculum_indices[i]),
                     validation_data=val_set, callbacks=[stop_callback],
-                    batch_size=batch_size, epochs=epochs//2, verbose=verbose)
+                    batch_size=batch_size, epochs=half_epoch, verbose=verbose)
+
+            real_epoch = len(hist.history.get('accuracy'))
+            origin = i * half_epoch
 
             # Save accuracies and losses
-            self.train_acc = np.concatenate((self.train_acc, 
-                hist.history.get('accuracy')), axis=0) 
-            self.train_loss = np.concatenate((self.train_loss, 
-                hist.history.get('loss')), axis=0)
-            self.val_acc = np.concatenate((self.val_acc, 
-                hist.history.get('val_accuracy')), axis=0)
-            self.val_loss = np.concatenate((self.val_loss, 
-                hist.history.get('val_loss')), axis=0)
+            self.train_acc[origin:real_epoch+origin] =  hist.history.get(
+                    'accuracy')
+            self.train_loss[origin:real_epoch+origin] =  hist.history.get(
+                    'loss')
+            self.val_acc[origin:real_epoch+origin] =  hist.history.get(
+                    'val_accuracy')
+            self.val_loss[origin:real_epoch+origin] =  hist.history.get(
+                    'val_loss')
 
 
     def SPL_train(self, train_data, train_labels, val_set, epochs=10,
