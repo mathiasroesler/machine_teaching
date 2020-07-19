@@ -47,12 +47,12 @@ if __name__ == "__main__":
     exp_rate = 150
 
     # Variables for self-paced learning
-    warm_up = 10 
+    warm_up = 100 
     threshold = 0.6
     growth_rate = 1.3
 
     # Variables for neural networks
-    archi_type = 3
+    archi_type = 2
     epochs = 2
     batch_size = 128
 
@@ -61,9 +61,9 @@ if __name__ == "__main__":
 
     # Other variables
     strat_names = ["Full", "MT", "CL", "SPL"]
-    iteration_nb = 1 
+    iteration_nb = 2 
     class_nb = -1  # Class number for one vs all
-    sparse = False  # If labels are to be sparse or not
+    sparse = True  # If labels are to be sparse or not
     verbose = 1  # Verbosity for learning
 
     # Dictionnaries 
@@ -73,7 +73,6 @@ if __name__ == "__main__":
     train_loss_dict = dict()
     val_loss_dict = dict()
     model_dict = dict()
-    normalizer_dict = dict()
 
     # Extract data from files
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
@@ -118,11 +117,11 @@ if __name__ == "__main__":
         # Initialize dictionaries
         time_dict[strat] = 0
         train_acc_dict[strat] = np.zeros(epochs)
+        test_acc_dict[strat] = np.zeros(iteration_nb)
         model_dict[strat] = CustomModel(data_shape, max_class_nb, archi_type,
                 warm_up, threshold, growth_rate)
         train_loss_dict[strat] = np.zeros(epochs)
         val_loss_dict[strat] = np.zeros(epochs)
-        normalizer_dict[strat] = np.zeros(epochs)
 
     for i in range(iteration_nb):
         print("\nITERATION {}".format(i+1))
@@ -148,37 +147,20 @@ if __name__ == "__main__":
             # Test model
             model.test(test_data, test_labels)
 
-            # Save accuracy, losses and 
-            train_acc_dict.update({strat: update_dict(
-                train_acc_dict.get(strat), model.train_acc)})
-            train_loss_dict.update({strat: update_dict(
-                train_loss_dict.get(strat), model.train_loss)})
-            val_loss_dict.update({strat: update_dict(
-                val_loss_dict.get(strat), model.val_loss)})
-            normalizer_dict.get(strat)[np.argwhere(train_acc_dict.get(
-                strat))] += 1
+            # Save accuracy and losses
+            train_acc_dict.update({strat: model.train_acc})
+            train_loss_dict.update({strat: model.train_loss})
+            val_loss_dict.update({strat: model.val_loss})
             time_dict.update({strat: time_dict.get(strat) + toc-tic})
+            test_acc_dict[strat] = model_dict.get(strat).test_acc
 
             # Reset model
             model.reset_model(data_shape, archi_type)
 
-    # Average time, accuracies and losses
+    # Average time
     for strat in strat_names:
         time_dict.update({strat: np.round(
             time_dict.get(strat)/iteration_nb, decimals=2)})
-        train_acc_dict.update({strat: np.round(
-            train_acc_dict.get(strat)[train_acc_dict.get(strat) != 0] / 
-            normalizer_dict.get(strat)[normalizer_dict.get(strat) != 0],
-            decimals=2)})
-        train_loss_dict.update({strat: np.round(
-            train_loss_dict.get(strat)[train_loss_dict.get(strat) != 0] /
-            normalizer_dict.get(strat)[normalizer_dict.get(strat) != 0],
-            decimals=2)})
-        val_loss_dict.update({strat: np.round(
-            val_loss_dict.get(strat)[val_loss_dict.get(strat) != 0] /
-            normalizer_dict.get(strat)[normalizer_dict.get(strat) != 0],
-            decimals=2)})
-        test_acc_dict[strat] = model_dict.get(strat).test_acc
 
     # Save results in file
     with open(filename, 'w') as f:
