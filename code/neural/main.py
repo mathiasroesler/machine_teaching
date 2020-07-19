@@ -3,7 +3,7 @@
 
 """
 Main program.
-Date: 16/7/2020
+Date: 19/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -11,6 +11,7 @@ Mail: roesler.mathias@cmi-figure.fr
 import time
 import sys
 import os
+import pickle as pkl
 from data_fct import *
 from misc_fct import *
 from plot_fct import *
@@ -21,6 +22,7 @@ if __name__ == "__main__":
     """ Main function.
 
     Two databases are available, mnist and cifar.
+    The results are pickled into the input file filename.
     Input:  database -> str, name of the database used.
             filename -> str, file used for saving results.
     Output: 
@@ -52,16 +54,13 @@ if __name__ == "__main__":
     growth_rate = 1.3
 
     # Variables for neural networks
-    archi_type = 2
+    archi_type = 1
     epochs = 2
     batch_size = 128
 
-    # Variables for plotting
-    plot_types = ['ro-', 'bo-', 'go-', 'ko-']
-
     # Other variables
-    strat_names = ["Full", "MT", "CL", "SPL"]
-    iteration_nb = 2 
+    strat_names = ["MT"] # ["Full", "MT", "CL", "SPL"]
+    iteration_nb = 1 
     class_nb = -1  # Class number for one vs all
     sparse = True  # If labels are to be sparse or not
     verbose = 1  # Verbosity for learning
@@ -163,9 +162,6 @@ if __name__ == "__main__":
             time_dict.get(strat)/iteration_nb, decimals=2)})
 
     # Save results in file
-    with open(filename, 'w') as f:
-        f.write(str(time_dict) + '\n')
-        f.write(str(train_acc_dict) + '\n')
-        f.write(str(test_acc_dict) + '\n')
-        f.write(str(train_loss_dict) + '\n')
-        f.write(str(val_loss_dict) + '\n')
+    with open(filename, 'wb') as f:
+        pkl.dump([time_dict, train_acc_dict, test_acc_dict, train_loss_dict,
+            val_loss_dict], f)

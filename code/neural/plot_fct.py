@@ -11,6 +11,7 @@ Mail: roesler.mathias@cmi-figure.fr
 import sys
 import os
 import numpy as np
+import pickle as pkl
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -125,22 +126,28 @@ if __name__ == "__main__":
     string = ""
     plot_types = ['r-', 'b-', 'g-', 'k-']
 
-    with open(filename, "r") as f:
-        for line in f:
-            new_line = line.replace("array", "np.array")
+    if filename[-3:] == 'pkl':
+        with open(filename, "rb") as f:
+                dict_list = pkl.load(f)
 
+    else:
+        with open(filename, "r") as f:
+            for line in f:
+                new_line = line.replace("array", "np.array")
+                new_line = new_line.replace("dtype=np.float32", "")
 
-            if new_line[-2] != '}':
-                string = string + new_line.strip('\n')
+                if new_line[-2] != '}':
+                    string = string + new_line.strip('\n')
 
-            elif string != "":
-                string = string + new_line.strip('\n')
-                dict_list.append(eval(string))
-                string = ""
-            
-            else:
-                dict_list.append(eval(new_line))
+                elif string != "":
+                    string = string + new_line.strip('\n')
+                    dict_list.append(eval(string))
+                    string = ""
+                
+                else:
+                    dict_list.append(eval(new_line))
 
+        
     if len(dict_list[1]) == 1:
         plot_types = ['r-']
 
