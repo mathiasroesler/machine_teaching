@@ -54,12 +54,12 @@ if __name__ == "__main__":
     growth_rate = 1.3
 
     # Variables for neural networks
-    archi_type = 3
-    epochs = 2
+    archi_type = 1
+    epochs = 4
     batch_size = 128
 
     # Other variables
-    strat_names = ["Full"] # ["Full", "MT", "CL", "SPL"]
+    strat_names = ["Full", "MT", "CL", "SPL"]
     iteration_nb = 1 
     class_nb = -1  # Class number for one vs all
     sparse = False  # If labels are to be sparse or not
@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
     # Find the optimal set indices or extract indices from file
     try:
-        file_name = data_name + "_indices.npy"
+        file_name = "{}_{}_indices.npy".format(data_name, archi_type)
         optimal_indices = np.load(file_name)
 
     except FileNotFoundError:

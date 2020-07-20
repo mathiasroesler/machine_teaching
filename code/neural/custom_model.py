@@ -526,12 +526,15 @@ class CustomModel(object):
 
 
 def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
-        batch_size=32, epochs=10):
+        filename="", archi_type=1, epochs=10, batch_size=32):
     """ Produces the optimal teaching set.
 
     The search stops if the accuracy of the model is greater than 
-    target_acc. The indices are saved to a file named by the user and
-    returned as well.
+    target_acc. The indices are saved to the file given by filename, if
+    no file is given then they are not saved. The indices are also 
+    returned as well. The architecture used for the model depends on
+    the variable archi_type.
+    1 for LeNet5, 2 for All-CNN, 3 for CNN.
     Input:  train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
@@ -541,10 +544,14 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
             exp_rate -> int, coefficiant of the exponential distribution
                 for the thresholds.
             target_acc -> float, accuracy threshold. 
-            batch_size -> int, number of examples used in a batch for
-                the neural network, default value 10.
+            filename -> str, file name to save indices,
+                default value "".
+            archi_type -> int, selects the architecture,
+                default value 1.
             epochs -> int, number of epochs for the training of the 
-                neural network, default value 32.
+                neural network, default value 10.
+            batch_size -> int, number of examples used in a batch for
+                the neural network, default value 32.
     Output: added_indices -> np.array[int], list of indices of selected
                 examples.
 
@@ -566,7 +573,8 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
     init_indices = nearest_avg_init(train_data, train_labels)
 
     # Declare model
-    model = CustomModel(train_data[0].shape, max_class_nb)
+    model = CustomModel(train_data[0].shape, max_class_nb,
+            archi_type=archi_type)
 
     # Initialize teaching data and labels
     teaching_data = tf.gather(train_data, init_indices)
@@ -617,10 +625,9 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
         ite += 1
 
     print("\nIteration number: {}".format(ite))
-    print("Select name to save data to:")
-    data_name = input().rstrip()
 
-    np.save(data_name, added_indices)
+    if filename != "":
+        np.save(filename, added_indices)
 
     return added_indices
 
