@@ -188,8 +188,8 @@ class CustomModel(object):
         self.model = self.set_model(input_shape, archi_type)
 
 
-    def train(self, train_data, train_labels, val_set, strategy, epochs=10,
-            batch_size=32, verbose=0):
+    def train(self, train_data, train_labels, strategy, val_set=None, 
+            epochs=10, batch_size=32, verbose=0):
         """ Calls the training function.
 
         The strategy depends on the variable strategy.
@@ -203,11 +203,12 @@ class CustomModel(object):
                     Fourth dimension, color channel. 
                 train_labels -> tf.tensor[int], list of one hot labels
                     associated with the train data.
+                strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
                 val_set -> tuple(tf.tensor[float32], tf.tensor[int]),
                     validation set.
                     First dimension, examples.
                     Second dimension, one hot labels.
-                strategy -> {'Full', 'MT', 'CL', 'SPL'}, strategy used. 
+                    Default value None.
                 epochs -> int, number of epochs for the training of the
                     neural network, default value 10.
                 batch_size -> int, number of examples used in a batch 
@@ -429,7 +430,7 @@ class CustomModel(object):
         hist = self.model.fit(
                 train_data, train_labels, 
                 validation_data=val_set, callbacks=[batch_callback, 
-                    epoch_callback, stop_callback],
+                    epoch_callback],
                 batch_size=batch_size, epochs=epochs, verbose=verbose)
     
         # Save accuracies and losses
@@ -474,7 +475,7 @@ class CustomModel(object):
         Function called at the end of each epoch during SPL training.
         Input:  batch -> tf.int32, batch number.
                 reset -> bool, resets the threshold and the growth 
-                    rate if True.
+                    rate if True. Default value False.
         Output: 
 
         """
@@ -509,20 +510,6 @@ class CustomModel(object):
         score = self.model.evaluate(test_data, test_labels, 
                 batch_size=batch_size, verbose=verbose)
         self.test_acc = np.append(self.test_acc, score[1])
-
-
-    def predict(data):
-        """ Predicts the label of the data.
-
-            Input:  test_data -> tf.tensor[float32], list
-                        of examples.
-                        First dimension, number of examples.
-                        Second and third dimensions, image. 
-                        Fourth dimension, color channel. 
-            Output: 
-
-        """
-        return self.model.predict(train_data)
 
 
 def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
@@ -593,7 +580,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
         weights = np.ones(shape=(nb_examples))/nb_examples 
 
         # Find all the missed examples indices
-        missed_indices = np.where(np.argmax(model.predict(train_data), 
+        missed_indices = np.where(np.argmax(model.model.predict(train_data), 
             axis=1) - train_labels != 0)[0]
 
         if missed_indices.size == 0 or accuracy >= target_acc:

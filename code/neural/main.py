@@ -54,13 +54,13 @@ if __name__ == "__main__":
     growth_rate = 1.3
 
     # Variables for neural networks
-    archi_type = 1
-    epochs = 4
+    archi_type = 2
+    epochs = 2
     batch_size = 128
 
     # Other variables
     strat_names = ["Full", "MT", "CL", "SPL"]
-    iteration_nb = 1 
+    iteration_nb = 2 
     class_nb = -1  # Class number for one vs all
     sparse = False  # If labels are to be sparse or not
     verbose = 1  # Verbosity for learning
@@ -93,12 +93,13 @@ if __name__ == "__main__":
 
     # Find the optimal set indices or extract indices from file
     try:
-        file_name = "{}_{}_indices.npy".format(data_name, archi_type)
-        optimal_indices = np.load(file_name)
+        indices_file = "{}_{}_indices.npy".format(data_name, archi_type)
+        optimal_indices = np.load(indices_file)
 
     except FileNotFoundError:
         optimal_indices = create_teacher_set(train_data, train_labels,
-                exp_rate, target_acc=0.95, batch_size=batch_size, epochs=2)
+                exp_rate, target_acc=0.95, filename=indices_file, 
+                archi_type=archi_type, epochs=2, batch_size=batch_size)
 
     # Create data sets
     train_set, optimal_set, val_set = split_data((train_data, train_labels),
@@ -134,11 +135,11 @@ if __name__ == "__main__":
             print("\n{} training".format(strat))
 
             if strat == "MT":
-                model.train(optimal_data, optimal_labels, val_set, strat,
+                model.train(optimal_data, optimal_labels, strat, val_set,
                         epochs, batch_size, verbose)
 
             else:
-                model.train(train_data, train_labels, val_set, strat, epochs,
+                model.train(train_data, train_labels, strat, val_set, epochs,
                         batch_size, verbose)
 
             toc = time.time()
