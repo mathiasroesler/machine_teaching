@@ -54,15 +54,15 @@ if __name__ == "__main__":
     growth_rate = 1.3
 
     # Variables for neural networks
-    archi_type = 1
+    archi_type = 3
     epochs = 2
     batch_size = 128
 
     # Other variables
-    strat_names = ["MT"] # ["Full", "MT", "CL", "SPL"]
+    strat_names = ["Full"] # ["Full", "MT", "CL", "SPL"]
     iteration_nb = 1 
     class_nb = -1  # Class number for one vs all
-    sparse = True  # If labels are to be sparse or not
+    sparse = False  # If labels are to be sparse or not
     verbose = 1  # Verbosity for learning
 
     # Dictionnaries 

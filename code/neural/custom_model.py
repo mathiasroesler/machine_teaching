@@ -137,17 +137,17 @@ class CustomModel(object):
                         input_shape[2])
 
             model.add(Dropout(0.2))
-            model.add(Conv2D(96, (3, 3), activation='relu',
+            model.add(Conv2D(48, (3, 3), activation='relu',
                 input_shape=input_shape))
+            model.add(Conv2D(48, (3, 3), activation='relu'))
+            model.add(Conv2D(48, (3, 3), 2, activation='relu'))
+            model.add(Dropout(0.5))
+            model.add(Conv2D(96, (3, 3), activation='relu'))
             model.add(Conv2D(96, (3, 3), activation='relu'))
             model.add(Conv2D(96, (3, 3), 2, activation='relu'))
             model.add(Dropout(0.5))
-            model.add(Conv2D(192, (3, 3), activation='relu'))
-            model.add(Conv2D(192, (3, 3), activation='relu'))
-            model.add(Conv2D(192, (3, 3), 2, activation='relu'))
-            model.add(Dropout(0.5))
-            model.add(Conv2D(192, (3, 3), activation='relu'))
-            model.add(Conv2D(192, (1, 1), activation='relu'))
+            model.add(Conv2D(96, (3, 3), activation='relu'))
+            model.add(Conv2D(96, (1, 1), activation='relu'))
             model.add(Conv2D(self.class_nb, (1, 1), activation='relu'))
             model.add(GlobalAveragePooling2D())
             model.add(Softmax()) 
@@ -168,7 +168,7 @@ class CustomModel(object):
             model.add(Conv2D(64, (3, 3), activation='relu'))
             model.add(Flatten())
             model.add(Dense(64, activation='relu'))
-            model.add(Dense(self.class_nb))
+            model.add(Dense(self.class_nb, activation='softmax'))
 
         return model
 
