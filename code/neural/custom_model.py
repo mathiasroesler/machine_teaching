@@ -302,7 +302,7 @@ class CustomModel(object):
         
         hist = self.model.fit(
                 train_data, train_labels, 
-                validation_data=val_set, callbacks=[stop_callback],
+                validation_data=val_set, callbacks=[],
                 batch_size=batch_size, epochs=epochs, verbose=verbose
                 )
     
@@ -364,7 +364,7 @@ class CustomModel(object):
             hist = self.model.fit(
                     tf.gather(train_data, curriculum_indices[i]),
                     tf.gather(train_labels, curriculum_indices[i]),
-                    validation_data=val_set, callbacks=[stop_callback],
+                    validation_data=val_set, callbacks=[],
                     batch_size=batch_size, epochs=half_epoch, verbose=verbose)
 
             real_epoch = len(hist.history.get('accuracy'))
