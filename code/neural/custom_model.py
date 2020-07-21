@@ -581,7 +581,7 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
 
         # Find all the missed examples indices
         missed_indices = np.where(np.argmax(model.model.predict(train_data), 
-            axis=1) - train_labels != 0)[0]
+            axis=1) - np.argmax(train_labels, axis=1) != 0)[0]
 
         if missed_indices.size == 0 or accuracy >= target_acc:
             # All examples are placed correctly or sufficiently precise
