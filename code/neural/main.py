@@ -22,14 +22,14 @@ if __name__ == "__main__":
     """ Main function.
 
     Two databases are available, mnist and cifar.
-    The results are pickled into the input file filename.
+    The results are pickled into the input file file_name.
     Input:  database -> str, name of the database used.
-            filename -> str, file used for saving results.
+            file_name -> str, file used for saving results.
     Output: 
 
     """
     if len(sys.argv) != 3:
-        print("usage: main.py database filename")
+        print("usage: main.py database file_name")
         exit(1)
 
     data_name = sys.argv[1]
@@ -43,24 +43,24 @@ if __name__ == "__main__":
         exit(1)
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    filename = dir_path+ "/" + sys.argv[2]
+    file_name = dir_path+ "/" + sys.argv[2]
 
     # Variables for machine teaching
     exp_rate = 150
 
     # Variables for self-paced learning
-    warm_up = 100 
-    threshold = 0.6
-    growth_rate = 1.3
+    warm_up = 150 
+    threshold = 1.5
+    growth_rate = 1.5
 
     # Variables for neural networks
-    archi_type = 2
-    epochs = 2
+    archi_type = 1
+    epochs = 5
     batch_size = 128
 
     # Other variables
     strat_names = ["Full", "MT", "CL", "SPL"]
-    iteration_nb = 2 
+    iteration_nb = 1
     class_nb = -1  # Class number for one vs all
     sparse = False  # If labels are to be sparse or not
     verbose = 1  # Verbosity for learning
@@ -72,6 +72,7 @@ if __name__ == "__main__":
     train_loss_dict = dict()
     val_loss_dict = dict()
     model_dict = dict()
+    conf_mat_dict = dict()
 
     # Extract data from files
     train_data, test_data, train_labels, test_labels = extract_data(data_name)
@@ -98,7 +99,7 @@ if __name__ == "__main__":
 
     except FileNotFoundError:
         optimal_indices = create_teacher_set(train_data, train_labels,
-                exp_rate, target_acc=0.95, filename=indices_file, 
+                exp_rate, target_acc=0.95, file_name=indices_file, 
                 archi_type=archi_type, epochs=2, batch_size=batch_size)
 
     # Create data sets
@@ -122,6 +123,7 @@ if __name__ == "__main__":
                 warm_up, threshold, growth_rate)
         train_loss_dict[strat] = np.zeros(epochs)
         val_loss_dict[strat] = np.zeros(epochs)
+        conf_mat_dict[strat] = np.zeros(max_class_nb)
 
     for i in range(iteration_nb):
         print("\nITERATION {}".format(i+1))
@@ -147,6 +149,10 @@ if __name__ == "__main__":
             # Test model
             model.test(test_data, test_labels)
 
+            conf_mat_dict[strat] = tf.math.confusion_matrix(np.argmax(
+                test_labels, axis=1), np.argmax(model.model.predict(test_data),
+                    axis=1))
+
             # Save accuracy and losses
             train_acc_dict.update({strat: model.train_acc})
             train_loss_dict.update({strat: model.train_loss})
@@ -163,6 +169,7 @@ if __name__ == "__main__":
             time_dict.get(strat)/iteration_nb, decimals=2)})
 
     # Save results in file
-    with open(filename, 'wb') as f:
+    with open(file_name, 'wb') as f:
         pkl.dump([time_dict, train_acc_dict, test_acc_dict, train_loss_dict,
             val_loss_dict], f)
+        pkl.dump(conf_mat_dict, f)
