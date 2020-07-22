@@ -3,18 +3,17 @@
 
 """
 Main program.
-Date: 19/7/2020
+Date: 22/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
 
-import time
-import sys
 import os
+import sys
+import time
 import pickle as pkl
 from data_fct import *
 from misc_fct import *
-from plot_fct import *
 from custom_model import * 
 
 
@@ -109,6 +108,7 @@ if __name__ == "__main__":
     train_labels = train_set[1]
     optimal_data = optimal_set[0]
     optimal_labels = optimal_set[1]
+    breakpoint()
 
     # Data information variables
     max_class_nb = find_class_nb(train_labels) 

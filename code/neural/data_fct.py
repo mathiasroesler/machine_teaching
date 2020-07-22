@@ -3,7 +3,7 @@
 
 """
 Contains the functions to manipulate the data.
-Date: 16/7/2020
+Date: 22/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -55,10 +55,8 @@ def extract_data(data_name):
         test_data = tf.reshape(test_data, (test_data.shape[0], 
             test_data.shape[1], test_data.shape[2], 1))
 
-    return prep_data(train_data[:20000]), prep_data(test_data[:4000]), \
-            train_labels[:20000], test_labels[:4000]
-    #return prep_data(train_data), prep_data(test_data), train_labels, \
-    #        test_labels
+    return prep_data(train_data), prep_data(test_data), train_labels, \
+            test_labels
 
 
 def prep_labels(labels, class_nb=0):

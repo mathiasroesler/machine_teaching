@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 16/7/2020
+Date: 22/7/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -517,10 +517,12 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
     """ Produces the optimal teaching set.
 
     The search stops if the accuracy of the model is greater than 
-    target_acc. The indices are saved to the file given by filename, if
-    no file is given then they are not saved. The indices are also 
-    returned as well. The architecture used for the model depends on
-    the variable archi_type.
+    target_acc, if the teaching set contains a tenth of the training
+    examples or if there are no missclassified examples anymore. 
+    The indices are saved to the file given by filename, if no file
+    is given then they are not saved. The indices are also returned
+    as well. The architecture used for the model depends on the
+    variable archi_type.
     1 for LeNet5, 2 for All-CNN, 3 for CNN.
     Input:  train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
@@ -583,7 +585,8 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
         missed_indices = np.where(np.argmax(model.model.predict(train_data), 
             axis=1) - np.argmax(train_labels, axis=1) != 0)[0]
 
-        if missed_indices.size == 0 or accuracy >= target_acc:
+        if missed_indices.size == 0 or accuracy >= target_acc or \
+                len(teaching_data) >= len(train_data) // 10:
             # All examples are placed correctly or sufficiently precise
             break
 
