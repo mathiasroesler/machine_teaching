@@ -108,7 +108,6 @@ if __name__ == "__main__":
     train_labels = train_set[1]
     optimal_data = optimal_set[0]
     optimal_labels = optimal_set[1]
-    breakpoint()
 
     # Data information variables
     max_class_nb = find_class_nb(train_labels) 

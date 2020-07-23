@@ -3,7 +3,7 @@
 
 """
 Plot functions.
-Date: 22/7/2020
+Date: 18/8/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -62,6 +62,9 @@ def plot_test_acc(acc_dict):
     """
     plt.boxplot(list(acc_dict.values()), labels=list(acc_dict.keys()))
 
+    plt.xlabel('Strategies')
+    plt.ylabel('Accuracy')
+
     plt.show()
 
 
@@ -111,7 +114,7 @@ def plot_confusion(conf_mat_dict, data_name):
     The data is either cifar or mnist.
     Input:  conf_mat_dict -> dict(str:tf.tensor[tf.int32]), dictionnary
             of the confusion matrix of each strategy.
-            data_name -> str, name of the data.
+            data_name -> str, name of the used database.
     Output:
 
     """
@@ -156,6 +159,36 @@ def plot_confusion(conf_mat_dict, data_name):
 
     plt.show()
     
+
+def class_distribution(labels, data_name):
+    """ Plots a bar graph of the labels.
+
+    The data is either cifar or mnist.
+    Input:  labels -> np.array[int32], labels.
+            data_name -> str, name of the used database.
+    Output:
+
+    """
+    if data_name == 'cifar':
+        classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog',
+                'frog', 'horse', 'ship', 'truck']
+
+    else:
+        classes = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    
+    x = np.arange(len(classes))
+
+    fig, ax = plt.subplots()
+    bars = ax.bar(x, labels)
+
+    ax.set_xticks(x)
+    ax.set_xtickclasses(classes)
+    ax.set_ylabel('Number of examples')
+    ax.tick_params(top=True, labeltop=True, 
+            bottom=False, labelbottom=False)
+
+    plt.show()
+
 #######################################################################
 
 if __name__ == "__main__":
