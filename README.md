@@ -1,4 +1,4 @@
-# Machine teaching for mutli-class image classification
+# Machine teaching for multi-class image classification
 This project uses neural networks for image classification to test the 
 performances of machine teaching. They were tested using two different databases
 (MNIST and CIFAR-10), and two architectures (variants of LeNet-5 [1] and AllCNN [2])
