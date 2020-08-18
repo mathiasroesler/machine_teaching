@@ -4,7 +4,7 @@
 """
 Custom tensorflow neural network model and
 extra functions used for different strategies.
-Date: 22/7/2020
+Date: 18/8/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -280,12 +280,12 @@ class CustomModel(object):
 
         """    
         try:
-            assert(epochs > 1)
+            assert(epochs >= 1)
             assert(np.issubdtype(type(epochs), np.integer))
 
         except AssertionError:
             print("Error in function simple_train of CustomModel: the number "
-                   "of epochs must be an integer greater than 1")
+                   "of epochs must be a positive integer.")
             exit(1)
 
 
@@ -406,12 +406,12 @@ class CustomModel(object):
 
         """    
         try:
-            assert(epochs > 1)
+            assert(epochs >= 1)
             assert(np.issubdtype(type(epochs), np.integer))
 
         except AssertionError:
             print("Error in function SPL_train of CustomModel: the number "
-                    "of epochs must be an integer greater than 1")
+                    "of epochs must be a positive integer.")
             exit(1)
 
         # Compile model
@@ -512,14 +512,14 @@ class CustomModel(object):
         self.test_acc = np.append(self.test_acc, score[1])
 
 
-def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
-        filename="", archi_type=1, epochs=10, batch_size=32):
+def create_teacher_set(train_data, train_labels, val_set, exp_rate, 
+        target_acc=0.5, file_name="", archi_type=1, epochs=10, batch_size=32):
     """ Produces the optimal teaching set.
 
     The search stops if the accuracy of the model is greater than 
     target_acc, if the teaching set contains a tenth of the training
     examples or if there are no missclassified examples anymore. 
-    The indices are saved to the file given by filename, if no file
+    The indices are saved to the file given by file_name, if no file
     is given then they are not saved. The indices are also returned
     as well. The architecture used for the model depends on the
     variable archi_type.
@@ -532,8 +532,8 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
                 associated with the train data.
             exp_rate -> int, coefficiant of the exponential distribution
                 for the thresholds.
-            target_acc -> float, accuracy threshold. 
-            filename -> str, file name to save indices,
+            target_acc -> float, accuracy threshold, default value 0.5.
+            file_name -> str, file name to save indices,
                 default value "".
             archi_type -> int, selects the architecture,
                 default value 1.
@@ -541,8 +541,9 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
                 neural network, default value 10.
             batch_size -> int, number of examples used in a batch for
                 the neural network, default value 32.
-    Output: added_indices -> np.array[int], list of indices of selected
-                examples.
+    Output: model -> tf.Model, learner model. 
+            teaching_indices -> np.array[int], list of indices of selected
+                examples for the teaching set.
 
     """
     rng = default_rng() # Set seed 
@@ -554,9 +555,9 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
     ite = 1
     nb_examples = train_data.shape[0]
     accuracy = 0
-    thresholds = rng.exponential(1/exp_rate, size=(nb_examples)) 
+    thresholds = rng.exponential(exp_rate, size=(nb_examples)) 
     teaching_set_len = np.array([0], dtype=np.intc) 
-    added_indices = np.array([], dtype=np.intc) 
+    teaching_indices = np.array([], dtype=np.intc) 
 
     # Initial example indices
     init_indices = nearest_avg_init(train_data, train_labels)
@@ -568,16 +569,12 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
     # Initialize teaching data and labels
     teaching_data = tf.gather(train_data, init_indices)
     teaching_labels = tf.gather(train_labels, init_indices)
-    added_indices = np.concatenate([added_indices, init_indices], axis=0)
-
-    # Initialize the model
-    model.train(teaching_data, teaching_labels, "Full", epochs=epochs,
-            batch_size=2)
+    teaching_indices = np.concatenate([teaching_indices, init_indices], axis=0)
 
     while len(teaching_data) != len(train_data):
         # Exit if all of the examples are in the teaching set or enough 
         # examples in the teaching set
-
+        
         # Weights for each example
         weights = np.ones(shape=(nb_examples))/nb_examples 
 
@@ -585,18 +582,18 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
         missed_indices = np.where(np.argmax(model.model.predict(train_data), 
             axis=1) - np.argmax(train_labels, axis=1) != 0)[0]
 
-        if missed_indices.size == 0 or accuracy >= target_acc or \
-                len(teaching_data) >= len(train_data) // 10:
+        if missed_indices.size == 0 or accuracy >= target_acc:
+               
             # All examples are placed correctly or sufficiently precise
             break
 
         # Find indices of examples that could be added
         new_indices = select_examples(missed_indices, thresholds, weights)
 
-        # Find the indices of the examples already present and remove them from
-        # the new ones
-        new_indices = np.setdiff1d(new_indices, added_indices)
-        added_indices = np.concatenate([added_indices, new_indices], axis=0)
+        # Find the indices of the examples already present and remove
+        # them from the new ones
+        new_indices = np.setdiff1d(new_indices, teaching_indices)
+        teaching_indices = np.concatenate([teaching_indices, new_indices], axis=0)
 
         if len(new_indices) != 0: 
             # Update the data for the model 
@@ -606,20 +603,19 @@ def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.9,
             # Add data and labels to teacher set and set length to list
             teaching_data = tf.concat([teaching_data, data], axis=0)
             teaching_labels = tf.concat([teaching_labels, labels], axis=0)
-            teaching_set_len = np.concatenate((teaching_set_len, 
-                [len(teaching_data)]), axis=0)
 
-        model.train(data, labels, "Full", batch_size=batch_size, epochs=epochs) 
-        accuracy = model.train_acc[-1]
+        model.train(data, labels, "Full", val_set, batch_size=batch_size,
+                epochs=epochs, verbose=2) 
+        accuracy = model.val_acc[-1]
 
         ite += 1
 
     print("\nIteration number: {}".format(ite))
 
-    if filename != "":
-        np.save(filename, added_indices)
+    if file_name != "":
+        np.save(file_name, teaching_indices)
 
-    return added_indices
+    return model, teaching_indices
 
 
 def two_step_curriculum(data, labels):

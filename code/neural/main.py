@@ -3,7 +3,7 @@
 
 """
 Main program.
-Date: 22/7/2020
+Date: 18/8/2020
 Author: Mathias Roesler
 Mail: roesler.mathias@cmi-figure.fr
 """
@@ -14,6 +14,7 @@ import time
 import pickle as pkl
 from data_fct import *
 from misc_fct import *
+from plot_fct import *
 from custom_model import * 
 
 
@@ -45,7 +46,7 @@ if __name__ == "__main__":
     file_name = dir_path+ "/" + sys.argv[2]
 
     # Variables for machine teaching
-    exp_rate = 150
+    exp_rate = 0.0005
 
     # Variables for self-paced learning
     warm_up = 150 
@@ -62,7 +63,7 @@ if __name__ == "__main__":
     iteration_nb = 1
     class_nb = -1  # Class number for one vs all
     sparse = False  # If labels are to be sparse or not
-    verbose = 1  # Verbosity for learning
+    verbose = 2  # Verbosity for learning
 
     # Dictionnaries 
     time_dict = dict()
@@ -97,7 +98,7 @@ if __name__ == "__main__":
         optimal_indices = np.load(indices_file)
 
     except FileNotFoundError:
-        optimal_indices = create_teacher_set(train_data, train_labels,
+        _, optimal_indices = create_teacher_set(train_data, train_labels,
                 exp_rate, target_acc=0.95, file_name=indices_file, 
                 archi_type=archi_type, epochs=2, batch_size=batch_size)
 
