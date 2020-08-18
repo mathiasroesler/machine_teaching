@@ -108,25 +108,26 @@ def plot_losses(train_loss_dict, val_loss_dict, plot_types):
     plt.show() 
 
 
-def plot_confusion(conf_mat_dict, data_name):
+def plot_confusion(conf_mat_dict, database):
     """ Plots the confusion matrix.
 
     The data is either cifar or mnist.
     Input:  conf_mat_dict -> dict(str:tf.tensor[tf.int32]), dictionnary
             of the confusion matrix of each strategy.
-            data_name -> str, name of the used database.
+            database -> str, name of the used database, defaults
+                to mnist if wrongly inputed.
     Output:
 
     """
     try:
-        assert(data_name == 'cifar' or data_name == 'mnist')
+        assert(database == 'cifar' or database == 'mnist')
 
     except:
         print("Error in function plot_confusion: the data must be cifar or \
                 mnist.")
         exit(1)
 
-    if data_name == 'cifar':
+    if database == 'cifar':
         labels = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog',
                 'frog', 'horse', 'ship', 'truck']
 
@@ -194,16 +195,17 @@ def plot_times(time_dict, teaching_time):
     plt.show()
 
 
-def plot_class_distribution(labels, data_name):
+def plot_class_distribution(labels, database):
     """ Plots a bar graph of the labels.
 
     The data is either cifar or mnist.
     Input:  labels -> np.array[int32], labels.
-            data_name -> str, name of the used database.
+            database -> str, name of the used database, defaults
+                to mnist if wrongly inputed.
     Output:
 
     """
-    if data_name == 'cifar':
+    if database == 'cifar':
         classes = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog',
                 'frog', 'horse', 'ship', 'truck']
 
@@ -229,7 +231,7 @@ def plot_class_distribution(labels, data_name):
 if __name__ == "__main__":
 
     if len(sys.argv) != 3:
-        print("usage: plot.py file_name data_name")
+        print("usage: plot.py file_name database")
         exit(1)
 
     dir_path = os.path.dirname(os.path.realpath(__file__))
