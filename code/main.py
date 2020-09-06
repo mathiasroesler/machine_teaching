@@ -15,7 +15,7 @@ import pickle as pkl
 from data_fct import *
 from misc_fct import *
 from plot_fct import *
-from custom_model import * 
+from CustomModel import * 
 
 
 if __name__ == "__main__":
