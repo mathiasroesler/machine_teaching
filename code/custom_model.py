@@ -29,7 +29,7 @@ class CustomModel(object):
         """ Initializes the model.
 
         The architecture depends on the variable archi_type.
-        1 for LeNet5, 2 for All-CNN, 3 for CNN.
+        1 for LeNet5, 2 for All-CNN.
         Input:  data_shape -> tuple[int], shape of the input data. 
                 class_nb -> int, number of classes.
                 archi_type -> int, selects the architecture,
@@ -91,7 +91,7 @@ class CustomModel(object):
         """ Creates a model.
 
         The architecture depends on the variable archi_type.
-        1 for LeNet5, 2 for All-CNN, 3 for CNN.
+        1 for LeNet5, 2 for All-CNN.
         Input:  input_shape -> tuple[int], shape of the input data. 
                 archi_type -> int, selects the architecture,
                     default value 1. 
@@ -100,7 +100,7 @@ class CustomModel(object):
         """
         try:
             assert(np.issubdtype(type(archi_type), np.integer))
-            assert(archi_type != 1 or archi_type != 2 or archi_type != 3)
+            assert(archi_type != 1 or archi_type != 2)
 
         except AssertionError:
             print("Error in set_model function of CustomModel: archi_type must "
@@ -152,32 +152,12 @@ class CustomModel(object):
             model.add(GlobalAveragePooling2D())
             model.add(Softmax()) 
 
-        if archi_type == 3:
-            # Add layers to model CNN
-            if (input_shape[0] == 28):
-                # Pad the input to be 32x32
-                model.add(ZeroPadding2D(2, input_shape=input_shape))
-                input_shape = (input_shape[0]+4, input_shape[1]+4,
-                        input_shape[2])
-
-            model.add(Conv2D(32, (3, 3), activation='relu',
-                input_shape=input_shape))
-            model.add(MaxPool2D((2, 2)))
-            model.add(Conv2D(64, (3, 3), activation='relu'))
-            model.add(MaxPool2D((2, 2)))
-            model.add(Conv2D(64, (3, 3), activation='relu'))
-            model.add(Flatten())
-            model.add(Dense(64, activation='relu'))
-            model.add(Dense(self.class_nb, activation='softmax'))
-
-        return model
-
 
     def reset_model(self, input_shape, archi_type=1):
         """ Resets the weights of the model.
 
         The architecture depends on the variable archi_type.
-        1 for LeNet5, 2 for All-CNN, 3 for CNN.
+        1 for LeNet5, 2 for All-CNN.
         Input:  input_shape -> tuple[int], shape of the input data. 
                 archi_type -> int, selects the architecture,
                     default value 1.
@@ -523,7 +503,7 @@ def create_teacher_set(train_data, train_labels, val_set, exp_rate,
     is given then they are not saved. The indices are also returned
     as well. The architecture used for the model depends on the
     variable archi_type.
-    1 for LeNet5, 2 for All-CNN, 3 for CNN.
+    1 for LeNet5, 2 for All-CNN.
     Input:  train_data -> tf.tensor[float32], list of examples. 
                 First dimension, number of examples.
                 Second and third dimensions, image. 
