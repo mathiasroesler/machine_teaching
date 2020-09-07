@@ -494,8 +494,29 @@ class CustomModel(object):
         self.test_acc = np.append(self.test_acc, score[1])
 
 
-def create_teacher_set(train_data, train_labels, val_set, exp_rate, 
-        target_acc=0.5, file_name="", archi_type=1, epochs=10, batch_size=32):
+    def predict(self, data, batch_size=32, verbose=0):
+        """ Predicts the labels of the data.
+
+        Input:  test_data -> tf.tensor[float32], list
+                    of examples.
+                    First dimension, number of examples.
+                    Second and third dimensions, image. 
+                    Fourth dimension, color channel. 
+                test_labels -> tf.tensor[int], list of one hot 
+                    labels associated with the test data.
+                batch_size -> int, number of examples used in a 
+                    batch for the neural network, default value 32.
+                verbose -> int, amount of printing for testing,
+                    default value 0, see Tensorflow for details.
+        Output: predictions -> np.array[int], list of predictions
+        
+        """
+        return np.argmax(self.model.predict(data, batch_size, verbose), axis=1)
+
+
+
+def create_teacher_set(train_data, train_labels, exp_rate, target_acc=0.5,
+        file_name="", archi_type=1, epochs=10, batch_size=32):
     """ Produces the optimal teaching set.
 
     The search stops if the accuracy of the model is greater than 
@@ -561,8 +582,8 @@ def create_teacher_set(train_data, train_labels, val_set, exp_rate,
         weights = np.ones(shape=(nb_examples))/nb_examples 
 
         # Find all the missed examples indices
-        missed_indices = np.where(np.argmax(model.model.predict(train_data), 
-            axis=1) - np.argmax(train_labels, axis=1) != 0)[0]
+        missed_indices = np.where(model.predict(train_data, batch_size) -
+                np.argmax(train_labels, axis=1) != 0)[0]
 
         if missed_indices.size == 0 or accuracy >= target_acc:
                
@@ -586,9 +607,9 @@ def create_teacher_set(train_data, train_labels, val_set, exp_rate,
             teaching_data = tf.concat([teaching_data, data], axis=0)
             teaching_labels = tf.concat([teaching_labels, labels], axis=0)
 
-        model.train(data, labels, "Full", val_set, batch_size=batch_size,
+        model.train(data, labels, "Full", val_set=None, batch_size=batch_size,
                 epochs=epochs, verbose=2) 
-        accuracy = model.val_acc[-1]
+        accuracy = model.train_acc[-1]
 
         ite += 1
 
